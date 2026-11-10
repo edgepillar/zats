@@ -1,0 +1,10 @@
+dist
+src-capacitor
+src-cordova
+android
+ios
+# Kakaonut: byte-identical copies of the Kakaonut site's reader (keep in sync, don't reformat)
+src/js/kakaonut/stego.ts
+src/js/kakaonut/png.ts
+src/js/kakaonut/imageInfo.ts
+src/js/kakaonut/read.ts

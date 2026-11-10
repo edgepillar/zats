@@ -1,0 +1,87 @@
+{
+  "name": "Kakaonut Wallet",
+  "short_name": "Kakaonut",
+  "description": "Claim bitcoin hidden in a photo. A Cashu ecash wallet, forked from cashu.me.",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
+  "protocol_handlers": [
+    {
+      "protocol": "web+cashu",
+      "url": "/?token=%s"
+    },
+    {
+      "protocol": "web+lightning",
+      "url": "/?lightning=%s"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/narrow-1.png",
+      "form_factor": "narrow",
+      "sizes": "542x942",
+      "type": "image/png",
+      "label": "fullscreen view"
+    },
+    {
+      "src": "/screenshots/narrow-2.png",
+      "form_factor": "narrow",
+      "sizes": "542x942",
+      "type": "image/png",
+      "label": "fullscreen view"
+    },
+    {
+      "src": "/screenshots/wide-1.png",
+      "form_factor": "wide",
+      "sizes": "1910x932",
+      "type": "image/png",
+      "label": "fullscreen view"
+    },
+    {
+      "src": "/screenshots/wide-2.png",
+      "form_factor": "wide",
+      "sizes": "1910x932",
+      "type": "image/png",
+      "label": "fullscreen view"
+    }
+  ]
+}

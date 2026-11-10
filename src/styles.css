@@ -1,0 +1,3264 @@
+/* Kakaonut — KakaoTalk-style: white pages, bold black type, chat yellow, blue-grey chat rooms. */
+
+:root {
+  --yellow: #fee500;
+  --yellow-press: #f0d800;
+  --yellow-soft: #fff8b3;
+  --chat: #bacee0;
+  --nut: #9b5f32;
+
+  --bg: #ffffff;
+  --bg-2: #f6f6f6;
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --line: #e8e8e8;
+  --line-2: #d6d6d6;
+  --fill: #f2f2f7;
+  --fill-hover: #e9e9ee;
+  --fill-off: #e8e8ed;
+  --ink-off: #a1a1a6;
+  --hairline: #e5e5ea;
+  --grey-page: #f5f5f7;
+  --secondary: #6e6e73;
+  /* Same grey as --secondary: the lighter one failed contrast for the text it carried */
+  --tertiary: #6e6e73;
+  --ink: #191919;
+  --ink-2: #555555;
+  --ink-3: #6e6e73;
+
+  --good: #1f9d55;
+  --good-bg: #e6f6ec;
+  --warn: #9a5100;
+  --warn-bg: #fff2df;
+  --bad: #c92a2a;
+  --bad-bg: #ffe9e9;
+
+  --brown: #3b1e1e;
+  --panel: #f7f7f7;
+  --panel-2: #f1f1f1;
+  /* Corners: sharp on purpose (the soft default radius reads as generic) */
+  --r: 6px; /* surfaces, cards, main buttons */
+  --r-sm: 4px; /* small controls, chips, inputs, badges */
+  --r-xs: 2px; /* tags, bars */
+  --brand-font: 'Bricolage Grotesque', 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
+    'Noto Sans KR', 'Malgun Gothic', sans-serif;
+
+  /* Motion: one curve for things arriving or answering a tap, one for things travelling across */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 76px;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  word-break: keep-all;
+  /* Words only break mid-word where long unbroken strings live: addresses, tokens, mint errors */
+  overflow-wrap: break-word;
+}
+
+/* Prose never ends on a lone word */
+p,
+li,
+figcaption {
+  text-wrap: pretty;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+p {
+  margin: 0;
+}
+p + p {
+  margin-top: 0.4em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Header ---------- */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.92); /* before iOS 16.2 */
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top);
+}
+
+.top-row {
+  max-width: 1160px;
+  margin: 0 auto;
+  min-height: 64px;
+  padding: 0 16px;
+  display: flex;
+  flex-wrap: wrap; /* only at large zoom: the language button drops under the switch */
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+  flex: none;
+}
+.brand-name {
+  font-family: var(--brand-font);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.logo-mark {
+  --logo-size: 36px;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--logo-size);
+  height: var(--logo-size);
+  border-radius: 28%;
+  background: var(--yellow);
+  color: var(--brown);
+  font-family: var(--brand-font);
+  font-weight: 800;
+  font-size: calc(var(--logo-size) * 0.66);
+  line-height: 1;
+  user-select: none;
+}
+/* The two actions, as a switch in the top bar (same black pill as the active state elsewhere) */
+.modes {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.modes a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.16s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .modes a:hover:not([aria-current]) {
+    color: var(--ink);
+  }
+}
+.modes a[aria-current] {
+  background: var(--ink);
+  color: #fff;
+}
+.modes a:focus-visible,
+.lang-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.lang-btn {
+  flex: none;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    transform 0.16s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lang-btn:hover {
+    background: var(--panel);
+  }
+}
+/* On a phone the K alone carries the brand, so the switch and the language fit. */
+@media (max-width: 440px) {
+  .brand-name {
+    display: none;
+  }
+  .modes a {
+    padding: 0 14px;
+  }
+}
+
+/* ---------- Buttons: sharp corners, flat, no shadows ----------
+   Hover styles only apply with a mouse: a phone "hovers" whatever was tapped last and keeps it. */
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r);
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1.2;
+  color: var(--ink);
+  background: var(--fill);
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    opacity 0.15s,
+    transform 0.16s var(--ease-out);
+}
+/* Pressed: dims and gives a little the moment the finger lands; eases back on release */
+.btn:active:not(:disabled) {
+  opacity: 0.72;
+  transform: scale(0.97);
+  transition-duration: 0s;
+}
+.btn:disabled {
+  background: var(--fill-off);
+  color: var(--ink-off);
+  cursor: not-allowed;
+}
+.btn--primary {
+  background: var(--yellow);
+  color: #191919;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--primary:hover:not(:disabled) {
+    background: var(--yellow-press);
+  }
+}
+.btn--quiet,
+.btn--soft {
+  background: var(--fill);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--quiet:hover:not(:disabled),
+  .btn--soft:hover:not(:disabled) {
+    background: var(--fill-hover);
+  }
+}
+.btn--line {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.btn--ghost,
+.btn--text {
+  background: none;
+  color: var(--ink-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--text:hover {
+    color: var(--ink);
+  }
+}
+.btn--ink {
+  background: var(--ink);
+  color: #fff;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--ink:hover:not(:disabled) {
+    background: #000;
+  }
+}
+.btn--danger {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.btn--sm {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.btn--lg {
+  min-height: 52px;
+  font-size: 17px;
+  padding: 0 28px;
+}
+.btn--xl {
+  min-height: 56px;
+  font-size: 17px;
+}
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+.btn-icon {
+  font-size: 1.1em;
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.btn-row > * {
+  flex: 1 1 0;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  overflow: clip;
+  padding: 56px 16px 0;
+  text-align: center;
+}
+.hero-copy {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.hero-title {
+  margin: 0;
+  font-size: clamp(38px, 8vw, 72px);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+/* Hangul crowds at Latin tracking: about half the squeeze, a little more leading */
+.hero-title:lang(ko) {
+  font-size: clamp(32px, 6.2vw, 56px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+.make-head h2:lang(ko),
+.how-head h1:lang(ko) {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+:is(.hero-sub, .make-head p, .how-head p, .done-tip, .redeem-msg p, .pay-note):lang(ko) {
+  line-height: 1.65;
+}
+
+.hero-sub {
+  margin: 18px auto 0;
+  max-width: 560px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.hero-ctas {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+/* Hide and Redeem are equal doors: the same width, side by side or stacked. */
+.hero-ctas .btn {
+  min-width: min(196px, 100%);
+}
+@media (max-width: 480px) {
+  .hero-ctas {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.hero-stage {
+  position: relative;
+  max-width: 980px;
+  margin: 36px auto 0;
+  padding: 10px 0 56px;
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 960px) {
+  .hero {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    align-items: center;
+    gap: 16px;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 28px 32px 8px;
+    text-align: left;
+  }
+  .hero-sub {
+    margin-left: 0;
+  }
+  .hero-ctas {
+    justify-content: flex-start;
+  }
+  .hero-stage {
+    margin: 0;
+    padding: 16px 0 40px;
+  }
+}
+@media (max-width: 720px) {
+  .hero {
+    padding-top: 36px;
+  }
+}
+
+/* ---------- Phone + KakaoTalk-style chat ---------- */
+
+.phone {
+  position: relative;
+  z-index: 1;
+  width: 300px;
+  height: 610px;
+  padding: 10px;
+  border-radius: 46px;
+  background: #121212;
+  box-shadow: 0 0 0 2px #2a2a2a inset;
+  text-align: left;
+}
+.phone-screen {
+  height: 100%;
+  border-radius: 36px;
+  overflow: hidden;
+  background: #bacee0;
+  color: #191919;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font);
+}
+
+/* Status bar laid out like an iPhone's: the time centred in the left ear, the island in the middle,
+   signal, Wi-Fi and battery centred in the right ear. */
+.kt-status {
+  height: 38px;
+  padding-top: 4px;
+  display: grid;
+  grid-template-columns: 1fr 86px 1fr;
+  align-items: center;
+  color: #191919;
+}
+.kt-time {
+  justify-self: center;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.kt-island {
+  height: 24px;
+  border-radius: 999px;
+  background: #000;
+}
+.kt-status-icons {
+  justify-self: center;
+  margin-right: 8px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.kt-status-icons svg {
+  display: block;
+}
+
+.kt-head {
+  height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kt-back {
+  flex: none;
+  margin-left: -4px;
+}
+.kt-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+}
+.kt-head-icons {
+  display: flex;
+  gap: 12px;
+}
+
+.kt-room {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 10px 12px;
+  /* Clips the feed while it slides up, so a new message rises from the bottom edge */
+  overflow: hidden;
+  transition: opacity 0.3s ease-out;
+  animation: fade 0.3s ease-out;
+}
+.kt-room.is-fading {
+  opacity: 0;
+}
+.kt-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kt-date {
+  align-self: center;
+  margin-bottom: auto;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(25, 25, 25, 0.2);
+  padding: 3px 11px;
+  border-radius: 999px;
+}
+
+.kt-row {
+  display: flex;
+  gap: 7px;
+  animation: ktpop 0.26s var(--ease-out) both;
+}
+.kt-row--them {
+  transform-origin: 0 100%;
+}
+.kt-row--me {
+  justify-content: flex-end;
+  transform-origin: 100% 100%;
+}
+@keyframes ktpop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+.kt-avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 15px;
+  background: #ffd6e0;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+}
+.kt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.kt-name {
+  font-size: 11.5px;
+  color: #3c4650;
+}
+.kt-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.kt-bubble {
+  max-width: 172px;
+  padding: 7px 10px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  line-height: 1.38;
+}
+.kt-bubble--them {
+  background: #fff;
+  border-top-left-radius: 4px;
+}
+.kt-bubble--me {
+  background: #fee500;
+  border-top-right-radius: 4px;
+}
+.kt-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 9.5px;
+  color: #4d5b68;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+.kt-row--them .kt-meta {
+  align-items: flex-start;
+}
+.kt-unread {
+  color: #f2c200;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+/* The photo bubble is a card, like a KakaoTalk link: the photo, and under it a footer that opens
+   once the bitcoin has shown. */
+.kt-photo {
+  position: relative;
+  width: 178px;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #fff;
+}
+.kt-photo-clip {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: #8aa0b4;
+}
+.hero-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.25s ease-out;
+}
+.kt-photo.is-sending .hero-photo {
+  opacity: 0.55;
+}
+.kt-sending {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+  transition: opacity 0.2s ease-out;
+}
+.kt-sending.is-done {
+  opacity: 0;
+}
+
+/* Held to the light, like a banknote at a window: a soft band passes once, and where it is the
+   photo shows as its own pixels, a few of them yellow. Outside the band nothing changes. */
+.kt-light {
+  --band: linear-gradient(100deg, transparent 41%, #000 44%, #000 56%, transparent 59%);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--band) 100% 0 / 300% 100% no-repeat;
+  mask: var(--band) 100% 0 / 300% 100% no-repeat;
+}
+.kt-light::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.18);
+}
+.kt-photo.is-lit .kt-light {
+  animation: lightpass 1.7s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+/* The mask is 3 photos wide, so the band's centre sits at 150% − 2 × position. From 88.5% to 11.5%
+   it starts just off the left edge and ends just off the right: all of the travel is on the photo. */
+@keyframes lightpass {
+  from {
+    -webkit-mask-position: 88.5% 0;
+    mask-position: 88.5% 0;
+  }
+  to {
+    -webkit-mask-position: 11.5% 0;
+    mask-position: 11.5% 0;
+  }
+}
+.kt-pixels {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.kt-photo-foot {
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 11px 10px;
+}
+.kt-photo.is-open .kt-photo-foot {
+  display: flex;
+  animation: fade 0.25s ease-out 0.08s both;
+}
+.kt-foot-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4d5b68;
+}
+.kt-foot-main {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #191919;
+  font-variant-numeric: tabular-nums;
+}
+.kt-foot-sub {
+  font-size: 11.5px;
+  color: #4d5b68;
+}
+
+.kt-input {
+  height: 52px;
+  padding: 0 10px 6px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kt-plus {
+  font-size: 24px;
+  color: #9a9a9a;
+  width: 22px;
+  text-align: center;
+}
+.kt-field {
+  flex: 1;
+  height: 32px;
+  border-radius: 16px;
+  background: #f3f3f3;
+}
+.kt-send {
+  font-size: 12px;
+  font-weight: 700;
+  background: #fee500;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Make: white tiles on light grey, no shadows ---------- */
+
+.make {
+  background: var(--bg);
+  padding: 64px 20px 104px;
+}
+.make-head {
+  margin: 0;
+  text-align: left;
+}
+.make-head h2 {
+  margin: 0;
+  font-size: clamp(30px, 6vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.make-head p {
+  margin-top: 10px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ---------- Action card: the photo on one side, the money on the other ----------
+   Phones stack heading → photo → panel → saved list on one left edge. From 720 px the photo
+   takes the left column (and stays in view) while the heading and the panel read down the right. */
+.make-grid {
+  --make-gap: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--make-gap);
+  max-width: 560px;
+  margin: 0 auto;
+  scroll-margin-top: 90px;
+}
+.make-photo--aside {
+  display: none;
+}
+.make-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+@media (min-width: 720px) {
+  .make-grid {
+    max-width: 1060px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      'photo head'
+      'photo panel'
+      'photo saved';
+    column-gap: 64px;
+    row-gap: 32px;
+    align-items: start;
+  }
+  .make-grid > .make-head {
+    grid-area: head;
+    padding-top: 8px;
+  }
+  /* Beside the photo the heading shares a ~490 px column: up to 40 px keeps
+     "Hide bitcoin in your photo" (and the Korean) on one line. */
+  .make-grid > .make-head h2 {
+    font-size: clamp(30px, 3.3vw, 40px);
+  }
+  .make-photo,
+  .make-photo--aside {
+    display: block;
+    grid-area: photo;
+    position: sticky;
+    top: 96px;
+  }
+  .make-panel {
+    grid-area: panel;
+  }
+  .make-grid > .saved {
+    grid-area: saved;
+  }
+  .make-grid--solo {
+    max-width: 560px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'panel' 'saved';
+  }
+}
+
+.tile {
+  background: var(--panel);
+  border-radius: var(--r);
+  padding: 28px 24px;
+}
+
+.picker {
+  font: inherit;
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    transform 0.16s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .picker:hover {
+    background: var(--panel-2);
+  }
+}
+.picker-icon {
+  color: var(--tertiary);
+  margin-bottom: 10px;
+}
+.picker-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.picker-hint {
+  font-size: 14px;
+  color: var(--tertiary);
+}
+@media (hover: none) {
+  .picker-hint {
+    display: none;
+  }
+}
+.picker--has {
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+}
+@media (hover: hover) and (pointer: fine) {
+  .picker--has:hover {
+    background: #000;
+  }
+}
+.picker--has img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+}
+/* An empty photo slot keeps a photo's proportions instead of a fixed height */
+.make-photo .picker:not(.picker--has) {
+  aspect-ratio: 4 / 3;
+  min-height: 0;
+}
+@media (min-width: 720px) {
+  .picker--has img {
+    max-height: 600px;
+  }
+}
+.picker-change,
+.done-badge {
+  position: absolute;
+  padding: 7px 14px;
+  border-radius: var(--r-sm);
+  background: rgba(0, 0, 0, 0.42);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.picker-change {
+  right: 14px;
+  bottom: 14px;
+}
+
+.amount-field {
+  display: flex;
+  flex-direction: column;
+}
+.amount-tile:focus-within {
+  outline: 2px solid var(--hairline);
+  outline-offset: -2px;
+}
+.tile-label {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+.amount {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+  container-type: inline-size; /* the number below sizes itself against this width */
+}
+.amount-input {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+}
+.amount-input > * {
+  grid-area: 1 / 1;
+  font: inherit;
+  /* 60px until the number (--chars long, about 0.56em a character) would run under "sats" */
+  font-size: 40px; /* before iOS 16 */
+  font-size: clamp(28px, calc((100cqi - 64px) / (var(--chars, 5) * 0.56)), 60px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.amount-sizer {
+  visibility: hidden;
+  white-space: pre;
+  padding-right: 2px;
+}
+.amount input {
+  /* No width of its own: the hidden text sizes the cell and the field fills it. */
+  width: 0;
+  min-width: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  caret-color: var(--ink);
+  text-align: left;
+}
+.amount-unit {
+  flex: none;
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--tertiary);
+}
+/* Four equal presets; with very large system text they wrap to a second row instead of
+   breaking a number in two */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 400px;
+  margin-top: 14px;
+}
+.presets .preset {
+  flex: 1 1 64px;
+  white-space: nowrap;
+}
+.preset {
+  font: inherit;
+  min-height: 36px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.16s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .preset:hover {
+    background: #ebebeb;
+  }
+}
+.preset[aria-pressed='true'] {
+  background: var(--ink);
+  color: #fff;
+}
+.field-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--bad);
+}
+
+/* iOS-style inset group */
+/* Photo size and Pay belong together: tight inside, generous above */
+.pay-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.group {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 20px;
+  background: var(--panel);
+  border-radius: var(--r);
+}
+.group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px 8px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.group-row:last-child {
+  border-bottom: 0;
+}
+.group-label {
+  font-size: 17px;
+}
+.group-caption {
+  padding: 0 20px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.seg {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 2px;
+  border-radius: var(--r);
+  background: #e8e8e8;
+}
+.seg button {
+  font: inherit;
+  min-height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.16s var(--ease-out);
+}
+.seg button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+}
+.select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--secondary);
+}
+.select select {
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 6px 22px 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font-size: 17px;
+  text-align: right;
+  cursor: pointer;
+}
+.select svg {
+  position: absolute;
+  right: 0;
+  pointer-events: none;
+}
+
+.invoice {
+  padding: 32px 24px 16px;
+  text-align: center;
+  container-type: inline-size;
+}
+.invoice-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+.invoice-amount {
+  margin-top: 2px;
+  white-space: nowrap;
+  /* Shrinks a long amount instead of wrapping "sats" (or a digit) onto its own line */
+  font-size: 34px; /* before iOS 16 */
+  font-size: clamp(26px, calc((100cqi - 60px) / (var(--chars, 5) * 0.56 + 0.3)), 44px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.invoice-amount span {
+  font-size: 22px;
+  color: var(--tertiary);
+}
+.invoice-note {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.invoice-warn {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+}
+.qr {
+  display: grid;
+  place-items: center;
+  width: min(260px, 100%);
+  aspect-ratio: 1;
+  margin: 24px auto 18px;
+  padding: 16px;
+  border-radius: var(--r);
+  background: #fff;
+  outline: 1px solid var(--hairline);
+  outline-offset: -1px;
+}
+.qr img {
+  width: 100%;
+  image-rendering: pixelated;
+}
+.waiting {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  font-size: 15px;
+  color: var(--secondary);
+}
+.tile .btn--quiet {
+  background: var(--surface);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tile .btn--quiet:hover:not(:disabled) {
+    background: #ebebeb;
+  }
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* A busy primary button stays yellow, with the buddies hopping inside */
+.btn--primary.is-busy:disabled {
+  background: var(--yellow);
+  color: #191919;
+  cursor: progress;
+}
+.btn.is-busy .buddies {
+  margin-right: 4px;
+}
+/* On yellow, the yellow bolt would disappear: paint it white there. */
+.btn--primary .buddy:nth-child(3) path:first-child {
+  fill: #fff;
+}
+.money-ln--busy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  padding: 18px 16px 14px;
+}
+
+/* Loader: the coin, the photo and the bolt hop one after another */
+/* The box is exactly the characters' height, so at rest they line up with the text beside them;
+   the hop rises above the box without moving anything around it. */
+.buddies {
+  --buddy: 28px;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: calc(var(--buddy) * 0.08);
+  height: var(--buddy);
+  flex: none;
+}
+.buddy {
+  width: var(--buddy);
+  height: var(--buddy);
+  transform-origin: 50% 100%;
+  animation: buddy-hop 1.1s cubic-bezier(0.33, 0, 0.3, 1) infinite;
+}
+.buddy:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.buddy:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes buddy-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  10% {
+    transform: translateY(0) scale(1.1, 0.88);
+  }
+  30% {
+    transform: translateY(-40%) scale(0.94, 1.07);
+  }
+  48% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buddy {
+    animation: none;
+  }
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-2);
+}
+.loading--column {
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.loading-label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.loading--column .loading-label {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.working {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 64px 24px;
+  text-align: center;
+  animation: settle 0.25s var(--ease-out) both;
+}
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+.working-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* ---------- Redeem: paste first, then the money card ---------- */
+.make {
+  scroll-margin-top: 0;
+}
+.redeem-notice {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--warn);
+}
+.redeem-loading {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+}
+.redeem .money {
+  width: 100%;
+  border-radius: var(--r);
+}
+.redeem .money-top {
+  padding: 24px 22px 26px;
+}
+.redeem .money-main {
+  font-size: 30px; /* before iOS 16 */
+  font-size: clamp(24px, calc(100cqi / (var(--chars, 1) * 0.62)), 40px);
+}
+.redeem .money-sub {
+  font-size: 16px;
+}
+.redeem .money-bottom {
+  border-radius: 0 0 var(--r) var(--r);
+}
+/* The result arrives the way a chat message does: up a little and settling, in one piece */
+.redeem [data-redeem] {
+  animation: card-in 0.28s var(--ease-out) both;
+  transform-origin: 50% 0;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+.redeem-retry {
+  margin-top: 16px;
+}
+.redeem-msg {
+  padding: 24px 22px;
+}
+.redeem-msg h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+.redeem-msg p {
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.redeem-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.redeem-drop {
+  aspect-ratio: 4 / 3;
+  min-height: 0;
+}
+.redeem-drop .picker-title {
+  max-width: 22ch;
+  text-align: center;
+  color: var(--ink-2);
+}
+/* The photo keeps its own shape. On phones it stays short enough that the money below it is
+   still in reach; from 720 px it has the left column to itself. */
+.redeem-shot {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.redeem-shot img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 200px; /* before iOS 15.4 */
+  max-height: min(260px, 28svh);
+  border-radius: var(--r);
+}
+.redeem-shot figcaption {
+  display: flex;
+  min-width: 0;
+  margin-top: 8px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+/* A long name loses its middle: the end (number, extension) is the part that tells photos apart */
+.fname-head {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fname-tail {
+  flex: none;
+}
+@media (min-width: 720px) {
+  .redeem-shot img {
+    max-height: 560px;
+    max-height: min(560px, calc(100svh - 96px));
+  }
+  .redeem-shot figcaption {
+    margin-top: 10px;
+  }
+}
+.redeem-again {
+  align-self: flex-start;
+  padding: 0;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.notice-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.notice-title--bad {
+  color: var(--bad);
+}
+.notice-note {
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.notice-detail {
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.done {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.done-photo {
+  position: relative;
+  border-radius: var(--r);
+  overflow: hidden;
+  background: #000;
+  animation: resolve 0.45s var(--ease-out) both;
+}
+@keyframes resolve {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.985);
+  }
+}
+/* From 720 px the same photo was already in this spot while it was being made: sharpen it in place */
+@media (min-width: 720px) {
+  .done-photo {
+    animation-name: sharpen;
+  }
+}
+@keyframes sharpen {
+  from {
+    filter: blur(4px);
+    transform: scale(0.985);
+  }
+}
+/* The words follow the photo they describe */
+.done-card,
+.done-again {
+  animation: rise 0.3s var(--ease-out) 70ms both;
+}
+.done-again {
+  animation-delay: 110ms;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.done-photo img {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+}
+.done-badge {
+  left: 14px;
+  bottom: 14px;
+}
+.done-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+.done-again {
+  align-self: flex-start;
+  padding: 0;
+}
+/* Photos keep their own shape: the frame hugs the image, no letterboxing */
+.make-preview {
+  position: relative;
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.make-preview,
+.done-photo {
+  width: fit-content;
+  max-width: 100%;
+}
+.make-preview img,
+.done-photo img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 640px;
+}
+.done-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.done-facts {
+  margin-top: -8px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.done-facts span {
+  white-space: nowrap;
+}
+.done-tip {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.raw-token {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--r);
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+.raw-token textarea {
+  font: 12px ui-monospace, Menlo, monospace;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+/* History: one closed row until it's wanted */
+.saved {
+  margin-top: 12px;
+}
+.saved-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 18px 0 20px;
+  border-radius: var(--r);
+  background: var(--panel);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.2s;
+}
+.saved-summary::-webkit-details-marker {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .saved-summary:hover {
+    background: var(--panel-2);
+  }
+}
+.saved-summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.saved-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+.saved-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.saved-chevron {
+  margin-left: auto;
+  color: var(--ink-3);
+  transition: transform 0.25s var(--ease-out);
+}
+.saved[open] .saved-chevron {
+  transform: rotate(180deg);
+}
+.saved[open] .saved-summary {
+  margin-bottom: 10px;
+}
+.saved .group {
+  margin-bottom: 8px;
+}
+/* A History row: amount and date, the status, and only the actions that can still do something */
+.saved-item {
+  padding: 14px 14px 14px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.saved-item:last-child {
+  border-bottom: 0;
+}
+.saved-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.saved-main {
+  flex: 1;
+  min-width: 0;
+}
+.saved-main strong {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.saved-main strong span {
+  font-weight: 500;
+  color: var(--tertiary);
+}
+.saved-item--spent .saved-main strong {
+  color: var(--ink-3);
+}
+.saved-meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tertiary);
+  white-space: nowrap;
+}
+.status--unspent {
+  color: #1a7f45;
+}
+.status--pending {
+  color: #c93400;
+}
+.saved-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.saved-trash {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  margin-left: auto;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.saved-row .saved-trash {
+  margin-left: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .saved-trash:hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+}
+.saved-trash.is-armed {
+  background: var(--bad);
+  color: #fff;
+  padding: 0 14px 0 11px;
+}
+.pay-note {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.saved-actions .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.saved-warn {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--bad);
+}
+.btn--white {
+  background: var(--surface);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--white:hover:not(:disabled) {
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--hairline);
+  }
+}
+
+/* ---------- Chat pages (Open, Test photos): a KakaoTalk-style room ---------- */
+
+/* ---------- How it works ---------- */
+.page--how {
+  flex: 1;
+  background: var(--bg);
+}
+.how {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 64px 20px 96px;
+}
+.how-head {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.how-head h1 {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+.how-head p {
+  margin-top: 12px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: balance;
+}
+/* Phrases of a short line stay whole, so it breaks at a comma, not before its last word */
+.phrase {
+  display: inline-block;
+}
+.how-tabs {
+  margin-top: 24px;
+}
+.how-tabs button {
+  min-height: 40px;
+  min-width: 112px;
+  font-size: 15px;
+}
+.seg button[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--ink);
+}
+.how-tabs button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.how-panel h2 {
+  margin: 0;
+  text-wrap: balance;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+.how-panel p,
+.how-panel li {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* Simple: four steps, each with one of the characters */
+.how-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.how-step {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 6px;
+  background: var(--panel);
+}
+.how-step p {
+  margin-top: 4px;
+}
+.how-art {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 4px;
+  background: var(--surface);
+}
+.character {
+  display: inline-block;
+}
+.buddy--still {
+  width: 100%;
+  height: 100%;
+  animation: none;
+}
+/* How the bitcoin hides: photo → pixels → three numbers → last bits */
+.how-visual {
+  margin-top: 36px;
+}
+.how-visual h2 {
+  margin-bottom: 14px;
+}
+.how-sec .px {
+  margin-top: 18px;
+}
+.px {
+  margin: 0;
+}
+.px-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.px-bar {
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.px-bar span {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 0;
+  background: var(--hairline);
+  overflow: hidden;
+}
+.px-bar span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.px-bar.is-done span::after,
+.px-bar.is-on span::after {
+  transform: scaleX(1);
+}
+.px-bar span.is-filling::after {
+  animation: px-fill var(--px-ms) linear both;
+}
+@keyframes px-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.px-stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.px-stage:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.px-zoom {
+  position: absolute;
+  inset: 0;
+  transition: transform 1.2s var(--ease-in-out);
+}
+.px:not([data-step='0']) .px-zoom {
+  transform: scale(10);
+}
+.px-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Step 1 marks the zoom box (200,50 / 32×24 of the 320×240 scene); it grows with the zoom */
+.px-box {
+  position: absolute;
+  left: 62.5%;
+  top: 20.8333%;
+  width: 10%;
+  height: 10%;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1.5px var(--ink);
+  transition: opacity 0.3s;
+}
+.px:not([data-step='0']) .px-box {
+  opacity: 0;
+}
+.px[data-step='2'] .px-zoom,
+.px[data-step='3'] .px-zoom {
+  visibility: hidden;
+  transition: transform 1.2s var(--ease-in-out), visibility 0s 0.45s;
+}
+/* The same box as real pixels: 8 × 6 squares */
+.px-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 3px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.px[data-step='1'] .px-grid {
+  opacity: 1;
+  transition-delay: 1s;
+}
+.px-grid .is-pick {
+  box-shadow: inset 0 0 0 3px var(--ink);
+}
+
+/* Steps 3 and 4: one pixel, as numbers */
+.px-pixel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--panel);
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+.px[data-step='2'] .px-pixel,
+.px[data-step='3'] .px-pixel {
+  opacity: 1;
+}
+.px-swatches {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.px-swatch-eq {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+.px-swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.px-swatch > span {
+  width: 40px;
+  height: 40px;
+  border-radius: 2px;
+}
+.px-swatch small {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.px[data-step='2'] .px-swatch small {
+  visibility: hidden;
+}
+/* "= After" lands once the last bits have rolled over */
+.px-swatch--after,
+.px-swatch-eq {
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+.px[data-step='3'] .px-swatch--after,
+.px[data-step='3'] .px-swatch-eq {
+  opacity: 1;
+  transition-delay: 0.9s;
+}
+.px-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.px-row {
+  --bit: min(22px, 5.4vw);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.px-ch {
+  width: 14px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.px-row--R .px-ch {
+  color: #e5484d;
+}
+.px-row--G .px-ch {
+  color: #2f9e5a;
+}
+.px-row--B .px-ch {
+  color: #3e6ad8;
+}
+.px-byte {
+  display: flex;
+  gap: 2px;
+}
+.px-bit {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--bit);
+  height: var(--bit);
+  border-radius: 2px;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  transition: background 0.3s 0.3s;
+}
+.px-bit-old,
+.px-bit-new {
+  grid-area: 1 / 1;
+  transition: transform 0.35s 0.5s, opacity 0.35s 0.5s;
+}
+.px-bit-new {
+  opacity: 0;
+  transform: translateY(70%);
+}
+.px[data-step='3'] .px-bit.is-last {
+  background: var(--yellow);
+}
+.px[data-step='3'] .is-changed .is-last .px-bit-old {
+  opacity: 0;
+  transform: translateY(-70%);
+}
+.px[data-step='3'] .is-changed .is-last .px-bit-new {
+  opacity: 1;
+  transform: none;
+}
+.px-num {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.px-num-arrow,
+.px-num-new {
+  display: none;
+}
+.px[data-step='3'] .px-num-arrow,
+.px[data-step='3'] .px-num-new {
+  display: inline;
+}
+.px[data-step='3'] .is-changed .px-num-old,
+.px-num-arrow {
+  color: var(--ink-3);
+}
+.px-token {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  opacity: 0;
+  transition: opacity 0.4s 0.2s;
+}
+.px[data-step='3'] .px-token {
+  opacity: 1;
+}
+.px-token code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+}
+.px-token mark {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: var(--yellow);
+  color: inherit;
+}
+.px-token-bits {
+  display: inline-flex;
+  gap: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.px-token-bits span {
+  padding: 1px 3px;
+  border-radius: 2px;
+  color: var(--ink-3);
+}
+.px-token-bits .is-used {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.px figcaption {
+  min-height: 3.2em;
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No zoom and no rolling bits: each step fades in where it is */
+  .px-zoom,
+  .px-bit,
+  .px-bit-old,
+  .px-bit-new {
+    transition: none;
+  }
+  .px-grid,
+  .px-pixel,
+  .px-token,
+  .px[data-step] .px-grid,
+  .px[data-step] .px-swatch--after,
+  .px[data-step] .px-swatch-eq {
+    transition: opacity 0.2s ease-out;
+    transition-delay: 0s;
+  }
+}
+
+.how-good {
+  margin-top: 28px;
+  padding: 0 4px;
+}
+.how-good ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Advanced: plain sections, one diagram */
+.how-sec + .how-sec {
+  margin-top: 32px;
+}
+.how-sec p {
+  margin-top: 8px;
+}
+.frame {
+  margin: 18px 0 0;
+}
+.frame-row {
+  display: flex;
+  gap: 3px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.frame-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 4px 10px;
+  background: var(--panel-2);
+  text-align: center;
+}
+.frame-cell code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.frame-cell span {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink-3);
+}
+.frame-cell--token {
+  background: var(--yellow);
+}
+.frame-cell--token span {
+  color: rgba(59, 30, 30, 0.72);
+}
+.frame figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.how-source {
+  display: inline-block;
+  margin-top: 36px;
+  font-weight: 600;
+  color: var(--ink);
+  text-underline-offset: 4px;
+}
+
+.page--chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.thread {
+  flex: 1;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 12px 20px;
+}
+
+.sys-row {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 8px;
+}
+.sys-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--panel-2);
+  padding: 4px 12px;
+  border-radius: 999px;
+  text-align: center;
+  max-width: 100%;
+}
+.sys-chip--test {
+  color: #191919;
+  background: var(--yellow);
+}
+
+.msg {
+  display: flex;
+  gap: 8px;
+  max-width: 100%;
+  animation: ktpop 0.26s var(--ease-out) both;
+}
+.msg--head {
+  margin-top: 10px;
+}
+.msg--bot {
+  align-self: flex-start;
+  transform-origin: 0 100%;
+  padding-right: 24px;
+}
+.msg--me {
+  align-self: flex-end;
+  justify-content: flex-end;
+  transform-origin: 100% 100%;
+  margin: 10px 0 2px;
+  padding-left: 48px;
+}
+
+.avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.msg--head .avatar .logo-mark {
+  border-radius: 38%;
+}
+.msg-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.msg-name {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin: 0 0 4px 2px;
+}
+
+.bubble {
+  max-width: 100%;
+  padding: 9px 13px;
+  border-radius: 15px;
+  font-size: 15px;
+  text-wrap: pretty;
+}
+.bubble--bot {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+.msg--head .bubble--bot {
+  border-top-left-radius: 4px;
+}
+.bubble--card {
+  padding: 12px;
+  width: 100%;
+}
+.bubble--typing {
+  padding: 13px 16px;
+}
+.bubble--me {
+  background: var(--yellow);
+  color: #191919;
+  border-top-right-radius: 4px;
+}
+.bubble--media {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.media-img {
+  max-width: min(220px, 62vw);
+  max-height: 220px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.media-file {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 90px;
+  font-size: 40px;
+  border-radius: 12px;
+  background: rgba(25, 25, 25, 0.08);
+}
+.media-caption {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 7px 3px;
+  max-width: min(220px, 62vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.typing {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  height: 10px;
+}
+.typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  animation: bounce 1s infinite ease-in-out;
+}
+.typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.lead {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+.muted {
+  color: var(--ink-2);
+}
+.small {
+  font-size: 13px;
+}
+.bubble .muted.small {
+  margin-top: 8px;
+}
+
+.progress {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.progress::-webkit-progress-bar {
+  background: var(--surface-2);
+  border-radius: var(--r-xs);
+}
+.progress::-webkit-progress-value {
+  background: var(--yellow);
+  border-radius: var(--r-xs);
+  transition: width 0.4s;
+}
+.progress::-moz-progress-bar {
+  background: var(--yellow);
+  border-radius: var(--r-xs);
+}
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.composer-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  gap: 8px;
+}
+/* Invoice: "Open in wallet" and "Copy invoice" side by side, equal width. */
+.invoice-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.invoice-buttons .btn {
+  min-width: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+/* Every button in the bar gets an equal share of the width. */
+.composer-inner .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0 12px;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(254, 229, 0, 0.35);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+  animation: fade 0.15s both;
+}
+.drop-overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(420px, 100%);
+  padding: 44px 20px;
+  border: 3px dashed #191919;
+  border-radius: var(--r);
+  background: var(--surface);
+  font-size: 22px;
+  font-weight: 800;
+}
+.drop-overlay-icon {
+  color: var(--ink-2);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* "Copy" → "Copied!": the new label eases in so the tap reads as heard; going back is instant */
+.flash-in {
+  display: inline-block;
+  animation: flash-in 0.15s ease-out both;
+}
+svg.flash-in {
+  animation-name: flash-icon;
+}
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(2px);
+  }
+}
+@keyframes flash-icon {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* Test-photo cards */
+.sticker {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px 12px;
+}
+.sticker-thumb {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.sticker-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sticker-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.sticker-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sticker-title strong {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-xs);
+  background: var(--yellow-soft);
+  color: var(--ink);
+}
+.facts {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.facts span {
+  white-space: nowrap;
+}
+.sticker-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sticker-actions .btn {
+  flex: 1 1 0;
+  min-width: max-content;
+}
+.flash {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.howto h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.howto ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 8px;
+}
+.howto li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 32px;
+  font-size: 15px;
+}
+.howto li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--yellow);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* Verdicts */
+.facts-line {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.facts-line .is-bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+.warnings {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--warn);
+}
+.test-line {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--yellow-soft);
+}
+
+/* Money card: what Open shows when a photo holds bitcoin, shaped like a money message in a chat.
+   The amount sits on yellow; the ways to take it are plain rows underneath. */
+.bubble--bare {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.money {
+  width: 280px;
+  max-width: 100%;
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.msg--head .money {
+  border-top-left-radius: 4px;
+}
+.money-top {
+  padding: 20px 20px 22px;
+  background: var(--yellow);
+  color: #191919;
+  transition: background 0.3s;
+  container-type: inline-size;
+}
+/* An amount stays on one line and shrinks to fit (--chars is its length): it never breaks mid-number. */
+.money-main {
+  white-space: nowrap;
+  font-size: 28px; /* before iOS 16 */
+  font-size: clamp(22px, calc(100cqi / (var(--chars, 1) * 0.62)), 34px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.money-unit {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.money-sub {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(59, 30, 30, 0.72);
+  font-variant-numeric: tabular-nums;
+}
+.token-num {
+  font-variant-numeric: tabular-nums;
+}
+.money-bottom {
+  transition: opacity 0.15s ease-out;
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--surface);
+  overflow: hidden;
+}
+.money-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 0 16px;
+  font-size: 15px;
+  text-align: center;
+}
+.money-cta {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.money-cta--small {
+  min-height: 46px;
+  font-size: 14px;
+  border-top: 1px solid var(--hairline);
+}
+.money-row--note {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.money-row--done {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.money-row--done svg {
+  flex: none;
+}
+.money-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--hairline);
+}
+.money-split--one {
+  grid-template-columns: 1fr;
+}
+.money-split button {
+  min-height: 46px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.money-split button + button {
+  border-left: 1px solid var(--hairline);
+}
+@media (hover: hover) and (pointer: fine) {
+  .money-cta:hover,
+  .money-split button:hover {
+    background: #fafafa;
+    color: var(--ink);
+  }
+}
+.money-cta:active,
+.money-split button:active {
+  transition-duration: 0s;
+  background: var(--surface-2);
+}
+
+/* Send to a Lightning address, inside the card */
+.money-ln {
+  padding: 12px 12px 0;
+}
+.money-ln-row {
+  display: flex;
+  gap: 8px;
+}
+.money-ln-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.15s;
+}
+.money-ln-input::placeholder {
+  color: var(--ink-3);
+}
+.money-ln-input:focus {
+  background: var(--fill-hover);
+}
+.money-ln-input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--bad);
+}
+.money-ln-send {
+  flex: none;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out);
+}
+.money-ln-send:disabled {
+  background: var(--fill-off);
+  color: var(--ink-off);
+  cursor: not-allowed;
+}
+.money-ln-status,
+.money-ln--busy .loading-label {
+  overflow-wrap: anywhere;
+}
+.money-ln-status {
+  padding: 8px 2px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.money-ln-status:empty {
+  padding: 0 0 12px;
+}
+.money-ln-status.is-error {
+  color: var(--bad);
+}
+
+/* Still asking the mint whether it's claimed: the ways to take it wait */
+.money-bottom.is-checking {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.money-amount.is-new {
+  animation: fade 0.15s ease-out both;
+}
+/* Sent: the tick draws itself, the words fade in */
+.money-row--done svg path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 0.25s var(--ease-out) 0.05s forwards;
+}
+.money-row--done span {
+  animation: fade 0.2s ease-out both;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Already claimed, or being claimed right now */
+.money.is-gone .money-top {
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.money.is-gone .money-sub {
+  color: var(--ink-3);
+}
+
+/* ---------- Footer (cream, letter-spaced caps, arched wordmark, mascot peeking up) ---------- */
+
+.foot {
+  border-top: 1px solid var(--line);
+  --foot-bg: var(--bg);
+  --foot-ink: var(--ink);
+  --foot-accent: #9b5f32;
+  position: relative;
+  overflow: hidden;
+  background: var(--foot-bg);
+  color: var(--foot-ink);
+  padding: 64px 56px 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 24px;
+}
+.foot-col {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.95;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.foot-col:lang(ko) {
+  letter-spacing: 0.04em;
+}
+.foot-col--right {
+  text-align: right;
+  display: flex; /* one link per line */
+  flex-direction: column;
+  align-items: flex-end;
+}
+/* On touch screens each link is a full finger tall; the negative margin keeps the first line level with the left column */
+@media (pointer: coarse) {
+  .foot-col--right {
+    margin-top: -6px;
+  }
+  .foot-col--right a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .foot-col--right a.foot-accent {
+    margin-top: 4px;
+  }
+}
+.foot-col a {
+  color: inherit;
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .foot-col a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}
+.foot-col a.foot-accent {
+  color: var(--foot-accent);
+}
+.foot-accent {
+  display: block;
+  margin-top: 14px;
+  color: var(--foot-accent);
+}
+/* The maker's credit: a quiet line under the links, not one of them */
+.foot-col a.foot-by {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+.foot-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 420px;
+  color: inherit;
+  text-decoration: none;
+}
+.foot-arc {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: var(--brown);
+  overflow: visible;
+}
+.foot-arc text {
+  font-family: var(--brand-font);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.foot-mark {
+  margin-top: 10px;
+  margin-bottom: -30px; /* the whole K shows; the tile's bottom edge tucks under */
+  border-radius: 26%;
+}
+
+@media (max-width: 900px) {
+  .foot {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 56px 20px 0;
+    gap: 22px;
+  }
+  .foot-col,
+  .foot-col--right {
+    text-align: center;
+    font-size: 16px;
+  }
+  .foot-col--right {
+    align-items: center;
+  }
+  .foot-logo {
+    order: 3;
+    width: min(360px, 100%);
+    margin-top: 18px;
+  }
+}
+
+/* Reduced motion: fewer and gentler, not none. Loops stop (loaders stand still) and nothing moves,
+   but fades and colour changes stay, so a change of state still reads; arrivals fade in place. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color, border-color, fill, stroke !important;
+  }
+  .kt-row,
+  .msg,
+  .done-photo,
+  .done-card,
+  .done-again,
+  .working,
+  .redeem [data-redeem],
+  .money-amount.is-new {
+    animation-name: fade !important;
+    animation-duration: 0.2s !important;
+  }
+  .btn:active:not(:disabled),
+  .picker:active,
+  .preset:active,
+  .seg button:active,
+  .modes a:active,
+  .lang-btn:active,
+  .money-ln-send:active {
+    transform: none !important;
+  }
+}
+
+/* ---------- Mobile: touch, short screens, notches ----------
+   Tested at 344 (Galaxy Z Fold cover), 360 (Galaxy S/A), 375×667 (iPhone SE), 390, 412, 430,
+   780×360 (phones held sideways) and 768 (iPad). */
+
+/* Press feedback: a control gives a little the moment a finger lands and eases back on release.
+   Rows that span a card change colour instead (see .money-cta, .saved-summary). */
+.picker:active,
+.preset:active,
+.seg button:active,
+.modes a:active,
+.lang-btn:active,
+.money-ln-send:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 0s;
+}
+.picker:active {
+  transform: scale(0.99);
+}
+.saved-summary:active {
+  background: var(--panel-2);
+  transition-duration: 0s;
+}
+
+/* Long-press: no selecting a control's label, and no link menu on links that carry a token
+   (its Copy or Share would hand the bitcoin to someone else) */
+button,
+.btn,
+.modes a,
+.lang-btn,
+.money-cta {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.money-cta,
+.saved-actions a {
+  -webkit-touch-callout: none;
+}
+
+/* Taps are taps: no double-tap zoom delay on controls */
+a,
+button,
+summary,
+select,
+[role='tab'] {
+  touch-action: manipulation;
+}
+
+/* Every control is at least 44 px tall where a finger has to hit it */
+.modes {
+  padding: 2px;
+}
+.modes a {
+  min-height: 44px;
+}
+.lang-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.brand {
+  padding: 4px;
+  margin: -4px;
+}
+.preset {
+  min-height: 44px;
+}
+.select select {
+  min-height: 44px;
+}
+.saved-actions .btn {
+  min-height: 44px;
+}
+.saved-trash {
+  min-width: 44px;
+  height: 44px;
+}
+.how-tabs button {
+  min-height: 44px;
+}
+.px-bar {
+  padding: 20px 0;
+}
+.px-bars {
+  margin: -16px 0 -12px;
+}
+.how-source {
+  display: inline-block;
+  padding: 10px 0;
+}
+
+/* Notches and rounded corners only intrude at the sides when a phone is held sideways */
+@media (orientation: landscape) and (max-height: 520px) {
+  .top-row {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .hero,
+  .make,
+  .how {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+  }
+}
+
+/* Phones: smaller step pictures, so the words get a reading line instead of a narrow column */
+@media (max-width: 420px) {
+  .how-step {
+    gap: 14px;
+    padding: 14px;
+  }
+  .how-art {
+    width: 56px;
+    height: 56px;
+  }
+  .how-art .character {
+    width: 42px !important;
+    height: 42px !important;
+  }
+}
+
+/* Short screens (a phone held sideways): a slimmer top bar, and photos never taller than the view,
+   so the amount and Pay stay within reach */
+@media (max-height: 520px) {
+  .top-row {
+    height: 52px;
+  }
+  .make,
+  .how {
+    padding-top: 40px;
+  }
+  .make-photo,
+  .make-photo--aside {
+    position: static;
+  }
+  .picker--has img,
+  .make-preview img,
+  .done-photo img {
+    max-height: calc(100svh - 96px);
+  }
+  .make-photo .picker:not(.picker--has) {
+    max-height: calc(100svh - 96px);
+  }
+}

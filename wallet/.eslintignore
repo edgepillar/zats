@@ -1,0 +1,14 @@
+/dist
+/src-bex/www
+/src-capacitor
+/src-cordova
+/.quasar
+/node_modules
+.eslintrc.js
+babel.config.js
+**/cashu-ts/dist/**
+# Kakaonut: byte-identical copies of the Kakaonut site's reader
+src/js/kakaonut/stego.ts
+src/js/kakaonut/png.ts
+src/js/kakaonut/imageInfo.ts
+src/js/kakaonut/read.ts

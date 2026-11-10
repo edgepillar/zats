@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= productName %></title>
+
+    <meta charset="utf-8" />
+    <meta name="description" content="<%= productDescription %>" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta
+      name="viewport"
+      content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>"
+    />
+
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="128x128"
+      href="icons/128x128.png"
+    />
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/96x96.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/16x16.png" />
+    <link rel="icon" type="image/ico" href="favicon.ico" />
+
+    <style>
+      html {
+        /* Kakaonut: light by default */
+        background-color: #ffffff;
+      }
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--cashu-splash-bg, #ffffff);
+        opacity: 1;
+        transition: opacity 0.4s ease;
+      }
+      #app-splash.app-splash-fade {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash img {
+        width: 96px;
+        height: 96px;
+        border-radius: 28%;
+        opacity: 0;
+        animation: app-splash-logo-in 0.4s ease 0.5s forwards;
+      }
+      @keyframes app-splash-logo-in {
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash {
+          transition: none;
+        }
+        #app-splash img {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem("cashu.darkMode");
+          var isDark = false; // Kakaonut: light unless the user chose dark
+          if (raw != null) {
+            var v = String(raw).replace(/^__q_[a-z]+\|/i, "");
+            isDark = v === "1" || v === "true";
+          }
+          var bg = isDark ? "#000000" : "#ffffff";
+          document.documentElement.style.backgroundColor = bg;
+          document.documentElement.style.setProperty("--cashu-splash-bg", bg);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app-splash">
+      <img src="icons/icon-192x192.png" alt="" />
+    </div>
+    <!-- quasar:entry-point -->
+  </body>
+</html>

@@ -1,0 +1,385 @@
+<template>
+  <q-dialog
+    v-model="showInvoiceDetails"
+    maximized
+    backdrop-filter="blur(2px) brightness(60%)"
+    transition-show="fade"
+    transition-hide="fade"
+    no-backdrop-dismiss
+  >
+    <q-card class="q-pa-none qcard">
+      <div
+        :class="$q.dark.isActive ? 'bg-dark' : 'bg-white'"
+        class="display-token-fullscreen"
+      >
+        <!-- Header -->
+        <div class="row items-center q-pa-md" style="position: relative">
+          <q-btn
+            v-close-popup
+            flat
+            round
+            icon="close"
+            color="grey"
+            class="floating-close-btn"
+          />
+          <div class="col text-center fixed-title-height">
+            <q-item-label
+              overline
+              class="q-mt-sm text-white"
+              style="font-size: 1rem"
+            >
+              {{
+                isBolt12
+                  ? "Lightning Bolt12"
+                  : isOnchain
+                  ? "On-chain"
+                  : $t("InvoiceDetailDialog.invoice.caption")
+              }}
+            </q-item-label>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content-area">
+          <q-card-section class="q-pa-none">
+            <div v-if="invoiceData.request" class="row justify-center q-mb-md">
+              <div
+                class="col-12 col-sm-11 col-md-8 q-px-md"
+                style="max-width: 600px"
+              >
+                <div class="qr-container">
+                  <component
+                    :is="isOnchain ? 'div' : 'a'"
+                    class="text-secondary"
+                    :href="qrLink"
+                  >
+                    <q-responsive :ratio="1" class="q-mx-none">
+                      <vue-qrcode
+                        :value="qrValue"
+                        :options="{ width: 400 }"
+                        class="rounded-borders"
+                        style="width: 100%"
+                      >
+                      </vue-qrcode>
+                    </q-responsive>
+                  </component>
+                  <!-- Checkmark overlay when paid -->
+                  <div
+                    v-if="invoiceData.status === 'paid'"
+                    class="checkmark-overlay"
+                    :class="$q.dark.isActive ? 'checkmark-overlay--dark' : ''"
+                  >
+                    <transition appear enter-active-class="animated tada">
+                      <q-icon
+                        name="check_circle"
+                        color="positive"
+                        class="checkmark-icon"
+                      />
+                    </transition>
+                  </div>
+                </div>
+                <div style="height: 2px">
+                  <q-linear-progress
+                    v-if="runnerActive"
+                    indeterminate
+                    color="primary"
+                  />
+                </div>
+                <div
+                  v-if="isOnchain"
+                  class="q-mt-sm text-center text-grey-7 qr-copy-text cursor-pointer"
+                  @click="onCopyBolt11"
+                >
+                  <q-icon
+                    :name="copyButtonCopied ? 'check' : 'content_copy'"
+                    size="xs"
+                    class="q-mr-xs"
+                  />
+                  {{ invoiceData.request }}
+                </div>
+                <OnchainDepositLimits
+                  v-if="isOnchain && invoiceData.status !== 'paid'"
+                  class="q-mt-md"
+                  :mint-url="invoiceData.mint"
+                  :unit="invoiceData.unit"
+                />
+              </div>
+            </div>
+
+            <q-card-section class="q-pa-sm">
+              <div
+                v-if="invoiceData?.mintQuote"
+                class="row justify-center q-pt-md"
+              >
+                <div
+                  class="col-12 col-sm-11 col-md-8 q-px-md"
+                  style="max-width: 600px"
+                >
+                  <MintQuoteInformation
+                    :mint-quote="invoiceData.mintQuote"
+                    :invoice="invoiceData"
+                    :mint-url="invoiceData.mint"
+                    :show-amount="true"
+                    :method="invoiceMethod"
+                    :refresh-trigger="metadataRefreshTrigger"
+                  />
+                </div>
+              </div>
+              <div
+                v-else-if="invoiceData?.meltQuote"
+                class="row justify-center q-pt-lg"
+              >
+                <div
+                  class="col-12 col-sm-11 col-md-8 q-px-md"
+                  style="max-width: 600px"
+                >
+                  <MeltQuoteInformation
+                    :melt-quote="invoiceData.meltQuote"
+                    :invoice="invoiceData"
+                    :mint-url="invoiceData.mint"
+                    :history-paid-at="invoiceData.paidDate"
+                    :show-amount="true"
+                    :refresh-trigger="metadataRefreshTrigger"
+                  />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card-section>
+        </div>
+
+        <!-- Bottom panel action -->
+        <div class="bottom-panel">
+          <div class="row justify-center q-pb-lg q-pt-sm">
+            <div
+              class="col-12 col-sm-11 col-md-8 q-px-md"
+              style="max-width: 600px"
+            >
+              <q-btn
+                v-if="invoiceData.request"
+                class="full-width"
+                unelevated
+                size="lg"
+                color="primary"
+                rounded
+                @click="onCopyBolt11"
+              >
+                {{ copyButtonLabel }}
+              </q-btn>
+            </div>
+          </div>
+        </div>
+      </div>
+    </q-card>
+  </q-dialog>
+</template>
+<script lang="ts">
+import { defineComponent } from "vue";
+import { mapActions, mapState, mapWritableState } from "pinia";
+import VueQrcode from "@chenfengyuan/vue-qrcode";
+import { copyToClipboard } from "quasar";
+
+import { useWalletStore } from "src/stores/wallet";
+import { useUiStore } from "src/stores/ui";
+import { useWorkersStore } from "src/stores/workers";
+import MeltQuoteInformation from "src/components/MeltQuoteInformation.vue";
+import MintQuoteInformation from "src/components/MintQuoteInformation.vue";
+import OnchainDepositLimits from "src/components/OnchainDepositLimits.vue";
+import { PaymentMethod } from "src/stores/walletTypes";
+import { onchainDepositQrValue } from "src/js/onchain";
+// type hint for global mixin
+declare const windowMixin: any;
+
+export default defineComponent({
+  name: "InvoiceDetailDialog",
+  mixins: [windowMixin],
+  components: {
+    VueQrcode,
+    MeltQuoteInformation,
+    MintQuoteInformation,
+    OnchainDepositLimits,
+  },
+  props: {},
+  data: function () {
+    return {
+      copyButtonCopied: false,
+      copyButtonTimeout: null as any,
+      metadataRefreshTrigger: 0,
+    };
+  },
+  computed: {
+    ...mapState(useWalletStore, ["invoiceData"]),
+    ...mapState(useWorkersStore, ["invoiceWorkerRunning"]),
+    ...mapWritableState(useUiStore, ["showInvoiceDetails"]),
+    displayUnit: function () {
+      const display = (this as any).formatCurrency(
+        this.invoiceData.amount,
+        this.invoiceData.unit,
+        true
+      );
+      return display;
+    },
+    runnerActive: function () {
+      return this.invoiceWorkerRunning;
+    },
+    isSmallScreen() {
+      return this.$q.screen.lt.sm;
+    },
+    invoiceMethod(): PaymentMethod {
+      const method =
+        (this.invoiceData as any).method ||
+        (this.invoiceData as any).paymentType ||
+        (this.invoiceData as any).protocol ||
+        this.invoiceData.type;
+      return Object.values(PaymentMethod).includes(method)
+        ? method
+        : PaymentMethod.Bolt11;
+    },
+    copyButtonLabel: function () {
+      if (this.copyButtonCopied) {
+        return "Copied";
+      }
+      return this.$t("InvoiceDetailDialog.invoice.actions.copy.label");
+    },
+    isBolt12(): boolean {
+      return (
+        this.invoiceData.type === PaymentMethod.Bolt12 ||
+        this.invoiceData.type === PaymentMethod.Bolt12Subpayment ||
+        (this.invoiceData as any).method === PaymentMethod.Bolt12 ||
+        (this.invoiceData as any).method === PaymentMethod.Bolt12Subpayment
+      );
+    },
+    isOnchain(): boolean {
+      return (
+        this.invoiceData.type === PaymentMethod.Onchain ||
+        this.invoiceData.type === PaymentMethod.OnchainSubpayment
+      );
+    },
+    qrValue(): string {
+      return this.isOnchain
+        ? onchainDepositQrValue(
+            this.invoiceData.request,
+            this.invoiceData.requestedAmount,
+            this.invoiceData.unit
+          )
+        : "lightning:" + this.invoiceData.request.toUpperCase();
+    },
+    qrLink(): string | undefined {
+      return this.isOnchain
+        ? undefined
+        : "lightning:" + this.invoiceData.request;
+    },
+  },
+  watch: {
+    showInvoiceDetails(val: boolean) {
+      if (val) {
+        this.metadataRefreshTrigger += 1;
+      }
+    },
+  },
+  methods: {
+    onCopyBolt11: async function () {
+      const request = this.invoiceData?.request;
+      if (request) {
+        try {
+          await copyToClipboard(request);
+          this.copyButtonCopied = true;
+          // Clear any existing timeout
+          if (this.copyButtonTimeout) {
+            clearTimeout(this.copyButtonTimeout);
+          }
+          // Reset button label after 3 seconds
+          this.copyButtonTimeout = setTimeout(() => {
+            this.copyButtonCopied = false;
+          }, 3000);
+        } catch (error) {
+          console.error("Failed to copy to clipboard:", error);
+        }
+      }
+    },
+  },
+  beforeUnmount() {
+    if (this.copyButtonTimeout) {
+      clearTimeout(this.copyButtonTimeout);
+    }
+  },
+});
+</script>
+
+<style scoped>
+.display-token-fullscreen {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+}
+.floating-close-btn {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.fixed-title-height {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bottom-panel {
+  margin-top: auto;
+  background: var(--q-color-grey-1);
+  box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.05);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+.qcard {
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+
+/* QR Code with checkmark overlay */
+.qr-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qr-copy-text {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  hyphens: none;
+  font-size: 0.9em;
+  font-family: monospace;
+}
+
+.checkmark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.checkmark-overlay--dark {
+  background: rgba(30, 30, 30, 0.94);
+}
+
+.checkmark-icon {
+  font-size: clamp(100px, 35vw, 200px);
+}
+</style>
