@@ -3,7 +3,7 @@ import { useI18n, type Key } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
 
 /**
- * A four-step picture of how the bitcoin hides: a photo, zoomed until it's pixels, one pixel as
+ * A four-step picture of how the zats hide: a photo, zoomed until it's pixels, one pixel as
  * three numbers in binary, and the last bit of each number set to the next bit of the ecash.
  * Plays on its own while on screen; tap to step through. Real numbers throughout.
  */
@@ -32,8 +32,8 @@ const CELLS: RGB[] = Array.from({ length: BOX.cols * BOX.rows }, (_, i) => {
 })
 const PICK = 9 // column 1, row 1: a sky pixel
 
-// The first letter of every token, "c" = 01100011. Its first three bits go into this pixel.
-const C_BITS = [0, 1, 1, 0, 0, 0, 1, 1]
+// The first letter of every hidden frame, "Z" = 01011010. Its first three bits go into this pixel.
+const C_BITS = [0, 1, 0, 1, 1, 0, 1, 0]
 const AFTER: RGB = [
   (SKY[0] & ~1) | C_BITS[0],
   (SKY[1] & ~1) | C_BITS[1],
@@ -148,7 +148,7 @@ export function PixelExplainer() {
           <span className="px-token">
             <span>{t('px.ecash')}</span>
             <code>
-              <mark>c</mark>ashuB…
+              <mark>Z</mark>ATS·zats1…
             </code>
             <span className="px-token-bits">
               {C_BITS.map((b, i) => (

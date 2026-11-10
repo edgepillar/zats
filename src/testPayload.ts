@@ -1,14 +1,13 @@
 /**
- * Fake token used by test mode (Phase 0: does KakaoTalk keep the hidden bits?).
+ * Fake secret used by test mode (does a chat app keep the hidden bits?).
  *
- * It's shaped like a real token (starts with "cashuB", about 900 bytes, base64url-looking filler)
- * so the hidden frame is the same size as a real one, but it is clearly marked and can't be
- * decoded or spent by any wallet. It records the size the sticker was made at, so Open can say
+ * It's shaped like a real one (starts with "zats", 69 characters) so the hidden frame is the same
+ * size as a real one, but it is clearly marked and isn't a key to any account. It records the size the sticker was made at, so Open can say
  * which test sticker it's looking at.
  */
 
-const MARKER = 'cashuB-KAKAONUT-TEST-DATA-NOT-MONEY-'
-const TARGET_LENGTH = 900
+const MARKER = 'zats-TEST-NOT-MONEY-'
+const TARGET_LENGTH = 69
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 
 export interface TestPayloadInfo {

@@ -7,9 +7,8 @@ import { readStickerInWorker } from '../workerClient'
 import type { StickerReadResult } from '../read'
 import { FORMAT_NAMES } from '../imageInfo'
 import { isTestPayload, parseTestPayload, type TestPayloadInfo } from '../testPayload'
-import { checkClaimState, summarizeToken, type TokenSummary } from '../mint'
+import { checkClaimState, summarizeToken, type TokenSummary } from '../zenon'
 import { ClaimCard, type TokenCheck } from '../components/ClaimCard'
-import { loadBtcPrice } from '../price'
 import { canReadClipboardImages, readClipboardImage } from '../actions'
 import { CopyIcon, PhotoIcon } from '../components/Icons'
 
@@ -47,7 +46,6 @@ export function OpenScreen({ active }: { active: boolean }) {
   }
 
   const checkToken = async (id: number, token: string) => {
-    void loadBtcPrice().catch(() => {}) // so the amount can show in dollars or won right away
     let summary: TokenSummary
     try {
       summary = await summarizeToken(token)

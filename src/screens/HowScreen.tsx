@@ -131,10 +131,10 @@ function Advanced() {
 }
 
 const FRAME = [
-  { code: 'SATS', label: 'how.a.frame.magic', grow: 4 },
+  { code: 'ZATS', label: 'how.a.frame.magic', grow: 4 },
   { code: '01', label: 'how.a.frame.version', grow: 2 },
   { code: 'u32', label: 'how.a.frame.length', grow: 3 },
-  { code: 'cashuB…', label: 'how.a.frame.token', grow: 7, token: true },
+  { code: 'zats1…', label: 'how.a.frame.token', grow: 7, token: true },
   { code: 'CRC-32', label: 'how.a.frame.crc', grow: 4 },
 ] as const
 

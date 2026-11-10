@@ -4,8 +4,7 @@ import { useDropImages, usePasteImages } from '../hooks'
 import { readStickerInWorker, warmUpReader } from '../workerClient'
 import type { StickerReadResult } from '../read'
 import { isTestPayload } from '../testPayload'
-import { OfflineError, checkClaimState, loadCashu, summarizeToken, type TokenSummary } from '../mint'
-import { loadBtcPrice } from '../price'
+import { OfflineError, checkClaimState, loadZenon, summarizeToken, type TokenSummary } from '../zenon'
 import { canReadClipboardImages, readClipboardImage } from '../actions'
 import { ClaimCard, type TokenCheck } from './ClaimCard'
 import { DropOverlay } from './Composer'
@@ -13,7 +12,7 @@ import { Loading } from './Buddies'
 import { CopyIcon, PhotoIcon } from './Icons'
 
 /**
- * Redeem: paste or choose the photo a friend sent, see what's inside, take the bitcoin.
+ * Redeem: paste or choose the photo a friend sent, see what's inside, take the zats.
  * One photo at a time; a new paste or drop replaces the current one.
  */
 
@@ -53,12 +52,12 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
   const input = useRef<HTMLInputElement>(null)
   const canPaste = canReadClipboardImages() && !pasteBlocked
 
-  // Fetch the reading and Cashu code while the person finds the photo, so a connection that drops
+  // Fetch the reading and Zenon code while the person finds the photo, so a connection that drops
   // in the meantime doesn't stop the photo from opening.
   useEffect(() => {
     if (!active) return
     warmUpReader()
-    loadCashu().catch(() => {})
+    loadZenon().catch(() => {})
   }, [active])
 
   useEffect(
@@ -92,8 +91,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
     const outcome = outcomeOf(result)
     if (outcome.k !== 'money') return setStage({ k: 'done', photo, outcome })
 
-    // Real bitcoin: get the amount (and the price for dollars or won) before showing the card.
-    void loadBtcPrice().catch(() => {})
+    // A real secret: get the amount from the chain before showing the card.
     let summary: TokenSummary
     try {
       summary = await summarizeToken(outcome.token)
@@ -105,7 +103,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
     }
     if (id !== run.current) return
     setStage({ k: 'done', photo, outcome: { ...outcome, check: { summary, claim: 'checking' } } })
-    // The ways to take the money wait for this answer, so a mint that never replies can't hold them.
+    // The ways to take the money wait for this answer, so a node that never replies can't hold them.
     let claim: TokenCheck['claim']
     try {
       claim = await Promise.race([checkClaimState(outcome.token), sleep(CLAIM_CHECK_MS).then(() => 'unknown' as const)])

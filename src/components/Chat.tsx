@@ -43,7 +43,7 @@ interface BotProps {
   className?: string
 }
 
-/** A message from Kakaonut: avatar on the left, white bubble, typing dots before it appears. */
+/** A message from Zats: avatar on the left, white bubble, typing dots before it appears. */
 export function Bot({
   children,
   head = false,

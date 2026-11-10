@@ -1,0 +1,356 @@
+/**
+ * Talking to Zenon. A photo holds the secret of a fresh, single-use Zenon account: the 32-byte
+ * BIP39 entropy behind its 24 recovery words, written as "zats1" + 64 hex characters. Whoever has
+ * the photo controls that account, so it works like cash. The SDK (about 1 MB) is loaded on demand.
+ * Never log secrets.
+ *
+ * Account 0 of the 24 words is used, the same one Syrius opens, so the words also work there.
+ */
+
+type Sdk = typeof import('znn-typescript-sdk')
+type ZenonClient = ReturnType<Sdk['Zenon']['getInstance']>
+type KeyPair = ReturnType<InstanceType<Sdk['KeyStore']>['getKeyPair']>
+
+/** 1 ZNN = 100,000,000 zats (ZNN has 8 decimals, like bitcoin). */
+export const ZATS_PER_ZNN = 100_000_000
+const PREFIX = 'zats1'
+const ZNN = 'zts1znnxxxxxxxxxxxxx9z4ulx'
+const QSR = 'zts1qsrxxxxxxxxxxxxxmrhjll'
+/**
+ * The only tokens a photo counts and moves. Zenon accounts get unsolicited airdrop tokens, and each
+ * one would cost the claimer two more blocks of proof of work; anything else stays in the account,
+ * reachable with the 24 words.
+ */
+const KEPT = new Set([ZNN, QSR])
+const znnFirst = (zts: string) => (zts === ZNN ? 0 : 1)
+
+/** Public mainnet nodes from blog.zenon.info/public-nodes, quickest first. VITE_ZNN_NODES overrides. */
+const DEFAULT_NODES = ['wss://node.atsocy.com:35998', 'wss://node.zenonhub.io:35998', 'wss://my.hc1node.com:35998']
+export const NODES: string[] = ((import.meta.env.VITE_ZNN_NODES as string | undefined) ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+const nodes = () => (NODES.length ? NODES : DEFAULT_NODES)
+
+/* ---------- The secret in the photo ---------- */
+
+const HEX64 = /^[0-9a-f]{64}$/
+
+/** The text hidden in a photo, or null if it isn't one of ours. */
+export function entropyOf(token: string): string | null {
+  if (!token.startsWith(PREFIX)) return null
+  const hex = token.slice(PREFIX.length)
+  return HEX64.test(hex) ? hex : null
+}
+
+export const isSecret = (token: string) => entropyOf(token) !== null
+
+/** The SDK's loader and its connection failed. Worth a retry. */
+export class OfflineError extends Error {
+  constructor(cause?: unknown) {
+    super('offline', { cause })
+  }
+}
+
+let sdk: Promise<Sdk> | undefined
+/** Loads the Zenon code once. A failed load is forgotten, so the next try downloads it again. */
+export const loadZenon = (): Promise<Sdk> =>
+  (sdk ??= import('znn-typescript-sdk')
+    .then((m) => {
+      // Proof of work runs in the SDK's own worker, from public/pow/ (copied there by scripts/copy-pow.mjs).
+      m.Zenon.setPowBasePath(`${import.meta.env.BASE_URL}pow/`)
+      if (m.isPowWorkerSupported()) m.Zenon.usePowWorker()
+      return m
+    })
+    .catch((e: unknown) => {
+      sdk = undefined
+      throw new OfflineError(e)
+    }))
+
+async function keysOf(token: string): Promise<{ sdk: Sdk; keyPair: KeyPair; address: string; words: string }> {
+  const hex = entropyOf(token)
+  if (!hex) throw new Error('not-a-zats-secret')
+  const m = await loadZenon()
+  const store = m.KeyStore.fromEntropy(hex)
+  const keyPair = store.getKeyPair(0)
+  return { sdk: m, keyPair, address: keyPair.getAddress().toString(), words: store.mnemonic }
+}
+
+/** A brand-new single-use account: the text to hide in the photo, and the address to fund. */
+export async function newSecret(): Promise<{ token: string; address: string }> {
+  const m = await loadZenon()
+  const store = m.KeyStore.newRandom()
+  const token = PREFIX + store.entropy.toLowerCase()
+  return { token, address: store.getKeyPair(0).getAddress().toString() }
+}
+
+export async function addressOf(token: string): Promise<string> {
+  return (await keysOf(token)).address
+}
+
+/** The 24 recovery words, for importing the photo's account into Syrius. */
+export async function wordsOf(token: string): Promise<string> {
+  return (await keysOf(token)).words
+}
+
+/** A z1… address, cleaned up, or null. */
+export async function parseAddress(text: string): Promise<string | null> {
+  const clean = text.trim()
+  if (!/^z1[02-9ac-hj-np-z]{38}$/.test(clean)) return null
+  const m = await loadZenon()
+  try {
+    return m.Address.parse(clean).toString()
+  } catch {
+    return null
+  }
+}
+
+/* ---------- The connection ---------- */
+
+let connecting: Promise<ZenonClient> | undefined
+
+/** A live connection to a public node, trying each one in turn. */
+async function zenon(): Promise<{ sdk: Sdk; z: ZenonClient }> {
+  const m = await loadZenon()
+  const z = m.Zenon.getInstance()
+  const running = (z.client as { status?: () => number } | undefined)?.status?.() === 2
+  if (running) return { sdk: m, z }
+  connecting ??= (async () => {
+    let last: unknown
+    for (const url of nodes()) {
+      try {
+        await z.initialize(url, 8000)
+        await z.ledger.getFrontierMomentum() // proves the node answers, not just that the socket opened
+        return z
+      } catch (e) {
+        last = e
+        try {
+          z.clearConnection()
+        } catch {
+          // already closed
+        }
+      }
+    }
+    throw new OfflineError(last)
+  })().finally(() => {
+    connecting = undefined
+  })
+  return { sdk: m, z: await connecting }
+}
+
+/* ---------- Reading an account ---------- */
+
+export interface Holding {
+  tokenStandard: string
+  symbol: string
+  decimals: number
+  /** In the token's smallest unit (zats for ZNN). */
+  amount: bigint
+}
+
+export interface AccountState {
+  address: string
+  /** ZNN in the account plus ZNN sent to it and not yet received, in zats. */
+  zats: bigint
+  /** ZNN and QSR, received or not (other tokens are ignored). */
+  holdings: Holding[]
+  /** ZNN and QSR transfers sent to the account that haven't been received yet. */
+  unreceived: number
+  /** Blocks on the account's own chain. 0 means it has never been used. */
+  blockCount: number
+  /** Blocks published by the account but not yet in a momentum: a claim is in progress. */
+  unconfirmed: number
+}
+
+type Addr = ReturnType<Sdk['Address']['parse']>
+
+/** ZNN and QSR transfers waiting to be received, paging past any airdrop spam (at most 500 looked at). */
+async function incomingKept(z: ZenonClient, addr: Addr) {
+  const kept: Awaited<ReturnType<ZenonClient['ledger']['getUnreceivedBlocksByAddress']>>['list'] = []
+  for (let page = 0; page < 10; page++) {
+    const list = await z.ledger.getUnreceivedBlocksByAddress(addr, page, 50)
+    kept.push(...list.list.filter((b) => KEPT.has(b.tokenStandard.toString())))
+    if (!list.more) break
+  }
+  return kept
+}
+
+export async function accountState(address: string): Promise<AccountState> {
+  const { sdk: m, z } = await zenon()
+  const addr = m.Address.parse(address)
+  const [info, incoming, unconfirmed] = await Promise.all([
+    z.ledger.getAccountInfoByAddress(addr),
+    incomingKept(z, addr),
+    z.ledger.getUnconfirmedBlocksByAddress(addr, 0, 50),
+  ])
+  const byToken = new Map<string, Holding>()
+  const add = (zts: string, symbol: string, decimals: number, amount: bigint) => {
+    if (amount <= 0n || !KEPT.has(zts)) return
+    const h = byToken.get(zts)
+    if (h) h.amount += amount
+    else byToken.set(zts, { tokenStandard: zts, symbol, decimals, amount })
+  }
+  for (const item of Object.values(info?.balanceInfoMap ?? {})) {
+    add(item.token.tokenStandard.toString(), item.token.symbol, item.token.decimals, BigInt(item.balance.toString()))
+  }
+  for (const b of incoming) {
+    const zts = b.tokenStandard.toString()
+    add(zts, b.token?.symbol ?? (zts === ZNN ? 'ZNN' : 'QSR'), b.token?.decimals ?? 8, BigInt(b.amount.toString()))
+  }
+  const holdings = [...byToken.values()].sort((a, b) => znnFirst(a.tokenStandard) - znnFirst(b.tokenStandard))
+  return {
+    address,
+    zats: byToken.get(ZNN)?.amount ?? 0n,
+    holdings,
+    unreceived: incoming.length,
+    blockCount: info?.blockCount ?? 0,
+    unconfirmed: unconfirmed.count,
+  }
+}
+
+/* ---------- What Open shows ---------- */
+
+export type ClaimState = 'unspent' | 'pending' | 'spent'
+
+export interface TokenSummary {
+  address: string
+  /** ZNN inside, in zats. */
+  amount: number
+  /** QSR inside, e.g. "10 QSR". */
+  others: string[]
+}
+
+export function formatUnits(amount: bigint, decimals: number): string {
+  const base = 10n ** BigInt(decimals)
+  const whole = amount / base
+  const frac = (amount % base).toString().padStart(decimals, '0').replace(/0+$/, '')
+  return frac ? `${whole.toLocaleString('en-US')}.${frac}` : whole.toLocaleString('en-US')
+}
+
+export async function summarizeToken(token: string): Promise<TokenSummary> {
+  const address = await addressOf(token)
+  const s = await accountState(address)
+  return {
+    address,
+    amount: Number(s.zats),
+    others: s.holdings.filter((h) => h.tokenStandard !== ZNN).map((h) => `${formatUnits(h.amount, h.decimals)} ${h.symbol}`),
+  }
+}
+
+/** Whether the photo still holds anything. */
+export async function checkClaimState(token: string): Promise<ClaimState> {
+  return claimStateOf(await accountState(await addressOf(token)))
+}
+
+export function claimStateOf(s: AccountState): ClaimState {
+  if (s.unconfirmed > 0) return 'pending'
+  return s.holdings.length > 0 ? 'unspent' : 'spent'
+}
+
+/* ---------- Moving it out ---------- */
+
+export type SweepStep =
+  | { k: 'connecting' }
+  /** Proof of work and publishing for block `i` of `n`. */
+  | { k: 'receiving' | 'sending'; i: number; n: number }
+  | { k: 'settling' }
+
+export interface SweepResult {
+  to: string
+  /** ZNN moved, in zats. */
+  zats: number
+  others: string[]
+  hashes: string[]
+}
+
+export class SweepError extends Error {
+  constructor(readonly code: 'empty' | 'busy' | 'failed', cause?: unknown) {
+    super(code, { cause })
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * Moves the ZNN and QSR in the photo's account to `to`: one receive block for each incoming
+ * transfer, then one send block per token. Every block needs proof of work (the account has no
+ * plasma): about 18 seconds each on a recent laptop, longer on a phone.
+ */
+export async function sweep(token: string, to: string, onStep?: (s: SweepStep) => void): Promise<SweepResult> {
+  onStep?.({ k: 'connecting' })
+  const { keyPair, address } = await keysOf(token)
+  const { sdk: m, z } = await zenon()
+  const addr = m.Address.parse(address)
+
+  let state = await accountState(address)
+  if (state.unconfirmed > 0) throw new SweepError('busy')
+  if (state.holdings.length === 0) throw new SweepError('empty')
+
+  const incoming = await incomingKept(z, addr)
+  const plan = incoming.length + state.holdings.length
+  const hashes: string[] = []
+  let i = 0
+
+  try {
+    for (const block of incoming) {
+      onStep?.({ k: 'receiving', i: ++i, n: plan })
+      const done = await z.send(m.AccountBlockTemplate.receive(block.hash), keyPair)
+      hashes.push(done.hash.toString())
+      await waitForFrontier(z, addr, done.hash.toString())
+    }
+
+    if (incoming.length) {
+      onStep?.({ k: 'settling' })
+      // The balance moves once the receives are in a momentum; send only what is really there.
+      for (let t = 0; t < 30; t++) {
+        state = await accountState(address)
+        if (state.unreceived === 0 && state.unconfirmed === 0) break
+        await sleep(2000)
+      }
+    }
+
+    const info = await z.ledger.getAccountInfoByAddress(addr)
+    const balances = Object.values(info?.balanceInfoMap ?? {}).filter(
+      (b) => KEPT.has(b.token.tokenStandard.toString()) && BigInt(b.balance.toString()) > 0n,
+    )
+    // ZNN first, so the main amount is moved even if a later token fails.
+    balances.sort((a, b) => znnFirst(a.token.tokenStandard.toString()) - znnFirst(b.token.tokenStandard.toString()))
+    let zats = 0
+    const others: string[] = []
+    for (const b of balances) {
+      onStep?.({ k: 'sending', i: ++i, n: Math.max(plan, i) })
+      const amount = BigInt(b.balance.toString())
+      const done = await z.send(m.AccountBlockTemplate.send(m.Address.parse(to), b.token.tokenStandard, amount), keyPair)
+      hashes.push(done.hash.toString())
+      if (b.token.tokenStandard.toString() === ZNN) zats = Number(amount)
+      else others.push(`${formatUnits(amount, b.token.decimals)} ${b.token.symbol}`)
+      await waitForFrontier(z, addr, done.hash.toString())
+    }
+    return { to, zats, others, hashes }
+  } catch (e) {
+    if (e instanceof SweepError) throw e
+    throw new SweepError('failed', e)
+  }
+}
+
+/** Waits until the node shows `hash` as the account's latest block, so the next block builds on it. */
+async function waitForFrontier(z: ZenonClient, addr: Parameters<ZenonClient['ledger']['getFrontierAccountBlock']>[0], hash: string) {
+  for (let t = 0; t < 30; t++) {
+    const frontier = await z.ledger.getFrontierAccountBlock(addr).catch(() => null)
+    if (frontier?.hash.toString() === hash) return
+    await sleep(1000)
+  }
+}
+
+/** What kind of failure talking to Zenon was. */
+export function zenonErrorKind(e: unknown): 'offline' | 'other' {
+  if (e instanceof OfflineError) return 'offline'
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline'
+  return 'other'
+}
+
+/** z1qzal6c…0mz-style short form for tight rows. */
+export const shortAddress = (address: string) => `${address.slice(0, 7)}…${address.slice(-5)}`
+
+/** zats → "1.5" ZNN. */
+export const zatsToZnn = (zats: number | bigint) => formatUnits(BigInt(zats), 8)

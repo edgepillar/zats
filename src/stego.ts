@@ -2,14 +2,14 @@
  * Hides bytes in the lowest bit of each red, green and blue value of an image.
  *
  * Frame layout (big-endian), repeated up to MAX_COPIES times back to back:
- *   "SATS" | version (1 byte) | payload length (4 bytes) | payload | CRC-32 of payload (4 bytes)
+ *   "ZATS" | version (1 byte) | payload length (4 bytes) | payload | CRC-32 of payload (4 bytes)
  *
  * The CRC is what lets the reader say "survived" or "damaged" honestly instead of guessing.
  * Extra copies let small amounts of damage be repaired by a bitwise majority vote; they cannot
  * survive JPEG recompression or resizing, which rewrite almost every low bit.
  */
 
-const MAGIC = [0x53, 0x41, 0x54, 0x53] // "SATS"
+const MAGIC = [0x5a, 0x41, 0x54, 0x53] // "ZATS"
 const VERSION = 1
 const HEADER_BYTES = MAGIC.length + 1 + 4
 const CRC_BYTES = 4

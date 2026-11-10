@@ -1219,6 +1219,17 @@ p + p {
   width: 100%;
   image-rendering: pixelated;
 }
+/* The z1… deposit address under its QR code: monospace, selectable, wraps anywhere. */
+.deposit-address {
+  margin: -6px auto 14px;
+  max-width: 300px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
 .waiting {
   display: flex;
   justify-content: center;
@@ -2533,6 +2544,9 @@ p + p {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+.invoice-buttons--one {
+  grid-template-columns: 1fr;
+}
 .invoice-buttons .btn {
   min-width: 0;
   padding: 0 12px;
@@ -2810,6 +2824,13 @@ svg.flash-in {
   text-decoration: none;
   transition: background 0.15s;
 }
+button.money-cta {
+  width: 100%;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
 .money-cta--small {
   min-height: 46px;
   font-size: 14px;
@@ -2836,7 +2857,11 @@ svg.flash-in {
 .money-split--one {
   grid-template-columns: 1fr;
 }
-.money-split button {
+.money-split button,
+.money-split a {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
   min-height: 46px;
   padding: 0 8px;
   border: 0;
@@ -2848,18 +2873,20 @@ svg.flash-in {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.money-split button + button {
+.money-split > * + * {
   border-left: 1px solid var(--hairline);
 }
 @media (hover: hover) and (pointer: fine) {
   .money-cta:hover,
-  .money-split button:hover {
+  .money-split button:hover,
+  .money-split a:hover {
     background: #fafafa;
     color: var(--ink);
   }
 }
 .money-cta:active,
-.money-split button:active {
+.money-split button:active,
+.money-split a:active {
   transition-duration: 0s;
   background: var(--surface-2);
 }

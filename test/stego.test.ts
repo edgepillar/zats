@@ -12,7 +12,7 @@ function noiseImage(width: number, height: number, channels: 3 | 4 = 4, seed = 1
   return { width, height, channels, data }
 }
 
-const token = new TextEncoder().encode('cashuB' + 'x'.repeat(900))
+const token = new TextEncoder().encode('zats1' + 'ab'.repeat(32))
 
 describe('crc32', () => {
   it('matches the standard check value', () => {
@@ -68,7 +68,7 @@ describe('embed and extract', () => {
   })
 
   it('refuses an image that is too small', () => {
-    expect(() => embed(noiseImage(20, 20), token)).toThrow(/too small/)
-    expect(capacityBytes(20, 20)).toBeLessThan(token.length)
+    expect(() => embed(noiseImage(10, 10), token)).toThrow(/too small/)
+    expect(capacityBytes(10, 10)).toBeLessThan(token.length)
   })
 })

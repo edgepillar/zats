@@ -1,11 +1,11 @@
 /**
- * Keeps the chosen photo on this device while its invoice is being paid. Paying usually means
- * switching to a Lightning wallet, and a phone browser may reload the tab meanwhile: without this,
- * the bitcoin would be saved but the photo gone. IndexedDB, because photos are too big for
- * localStorage. Nothing here leaves the device.
+ * Keeps the chosen photo on this device while ZNN is sent to its address. Sending usually means
+ * switching to a wallet, and a phone browser may reload the tab meanwhile: without this, the secret
+ * would be saved but the photo gone. IndexedDB, because photos are too big for localStorage.
+ * Nothing here leaves the device.
  */
 
-const DB = 'kakaonut'
+const DB = 'zats'
 const STORE = 'photos'
 const KEY = 'pending'
 

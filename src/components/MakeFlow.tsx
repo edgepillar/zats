@@ -1,22 +1,21 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import QRCode from 'qrcode'
-import { satsUnit, useI18n } from '../i18n'
+import { zatsUnit, useI18n } from '../i18n'
 import { scrollBehavior, useDropImages, useFlash, usePasteImages } from '../hooks'
 import { fitSize, loadPhoto, photoToPixels, type LoadedPhoto } from '../photo'
 import { capacityBytes } from '../stego'
 import { makeStickerInWorker } from '../workerClient'
 import {
-  AmountRangeError,
-  MINT_URL,
-  checkClaimState,
-  createInvoice,
-  invoiceState,
-  isTestMint,
-  mintErrorKind,
-  mintToken,
-  type ClaimState,
-} from '../mint'
-import { claimLink } from '../config'
+  accountState,
+  claimStateOf,
+  newSecret,
+  shortAddress as short,
+  wordsOf,
+  zatsToZnn,
+  zenonErrorKind,
+  type AccountState,
+  type SweepResult,
+} from '../zenon'
 import { redeemUrl } from '../nav'
 import { clearPendingPhoto, loadPendingPhoto, savePendingPhoto } from '../photoStore'
 import {
@@ -27,7 +26,7 @@ import {
   loadTokens,
   markInPhoto,
   savePending,
-  type PendingQuote,
+  type PendingDeposit,
   type SavedToken,
 } from '../wallet'
 import { canCopyImage, canShareFiles, copyPng, copyText, downloadBlob, shareFile } from '../actions'
@@ -35,22 +34,22 @@ import { DropOverlay } from './Composer'
 import { Buddies, Loading } from './Buddies'
 import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon, TrashIcon } from './Icons'
 import { FlashLabel } from './Flash'
+import { SweepForm } from './SweepForm'
 
 /**
- * Make: photo → amount → pay → photo with sats inside.
- * Money safety (spec 5.5): the quote is saved before the invoice is shown and resumed after a
- * reload; the token is saved before it's embedded; if saving fails the raw token is shown.
+ * Make: photo → amount → a fresh Zenon address → the sender sends ZNN there → photo with zats inside.
+ * Money safety: the secret is saved to History before its address is shown, so ZNN that arrives
+ * after a reload, a cancel or a closed tab is never lost; if saving fails the 24 words are shown.
  */
 
 type Made = { file: File; url: string; width: number; height: number }
 
 type Stage =
   | { k: 'form' }
-  | { k: 'quoting' }
-  /** `unsaved`: the invoice couldn't be stored, so a reload would lose it. */
-  | { k: 'invoice'; pending: PendingQuote; unsaved?: boolean }
-  | { k: 'minting'; amount: number }
-  /** 'lost': paid, but the page reloaded and the photo couldn't be recovered. 'put': a saved token. */
+  | { k: 'creating' }
+  /** `unsaved`: the secret couldn't be stored, so a reload would lose it. */
+  | { k: 'deposit'; pending: PendingDeposit; unsaved?: boolean }
+  /** 'lost': funded, but the page reloaded and the photo couldn't be recovered. 'put': from History. */
   | {
       k: 'needPhoto'
       saved: SavedToken
@@ -60,22 +59,17 @@ type Stage =
     }
   | { k: 'embedding'; saved: SavedToken }
   | { k: 'done'; saved: SavedToken; made: Made; unsaved: boolean }
-  | { k: 'issued' }
-  /**
-   * `note`: reassurance after a payment went through. `token`: a token that isn't stored anywhere
-   * yet, shown so it can't be lost by tapping Cancel.
-   */
+  /** `token`: a secret that isn't stored anywhere yet, shown so it can't be lost by tapping Cancel. */
   | { k: 'error'; message: string; detail?: string; note?: string; token?: string; retry?: () => void }
 
 const EDGES = [2048, 1280, 640]
-const PRESETS = [1000, 5000, 10000, 20000]
-/** The Minibits mint takes up to 1,000,000 sats per Lightning deposit. */
-const MAX_AMOUNT = 1_000_000
-/**
- * Room a photo needs for any token up to MAX_AMOUNT: at most 20 proofs at about 150 bytes each,
- * plus the frame. Anything smaller than about 105 × 105 px is turned away before paying.
- */
-const MIN_ROOM = 4096
+/** 0.1, 0.5, 1 and 5 ZNN. */
+const PRESETS = [10_000_000, 50_000_000, 100_000_000, 500_000_000]
+/** 1,000 ZNN. A proof of concept: keep amounts small. */
+const MAX_AMOUNT = 100_000_000_000
+/** Room a photo needs for the secret (69 bytes) and its frame, with margin. */
+const MIN_ROOM = 128
+const POLL_MS = 3000
 
 function parseAmount(text: string): number | null {
   const clean = text.replace(/[\s,._]/g, '')
@@ -96,17 +90,17 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
   const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
   /** Why the last photo chosen was turned away. */
   const [photoError, setPhotoError] = useState<'unreadable' | 'small' | null>(null)
-  const [amountText, setAmountText] = useState('1,000')
+  const [amountText, setAmountText] = useState(() => num(100_000_000))
   const [edge, setEdge] = useState(2048)
   const [stage, setStage] = useState<Stage>(() => {
     const pending = loadPending()
-    return pending ? { k: 'invoice', pending } : { k: 'form' }
+    return pending ? { k: 'deposit', pending } : { k: 'form' }
   })
   const [offline, setOffline] = useState(false)
   const [saved, setSaved] = useState<SavedToken[]>(loadTokens)
   const photoRef = useRef(photo)
   photoRef.current = photo
-  /** The file behind `photo`, kept so it can be stored while its invoice is paid. */
+  /** The file behind `photo`, kept so it can be stored while the deposit arrives. */
   const photoFile = useRef<Blob | null>(null)
   const madeUrls = useRef<string[]>([])
   const card = useRef<HTMLDivElement>(null)
@@ -127,14 +121,11 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
         ? t('make.amount.max', { max: num(MAX_AMOUNT) })
         : t('make.amount.invalid')
   const tooSmall = photo !== null && room(photo, edge) < MIN_ROOM
-  const mintUrl = MINT_URL
 
   /** A failure as words for this person: specific where we can tell what happened. */
   const failure = (e: unknown): { message: string; detail?: string } => {
-    if (e instanceof AmountRangeError) return { message: t('make.err.range', { min: num(e.min), max: num(e.max) }) }
     if (e instanceof Error && /too small/i.test(e.message)) return { message: t('make.photo.tooSmall') }
-    const kind = mintErrorKind(e)
-    if (kind !== 'other') return { message: t(`make.err.${kind}`) }
+    if (zenonErrorKind(e) === 'offline') return { message: t('make.err.offline') }
     return { message: t('make.error'), detail: e instanceof Error ? e.message : String(e) }
   }
 
@@ -148,8 +139,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       setPhotoError('unreadable')
       return
     }
-    // Already paid: the token is known, so check this photo can hold it before using it.
-    if (stage.k === 'needPhoto' && room(next, stage.edge) < stage.saved.token.length) {
+    if (stage.k === 'needPhoto' && room(next, stage.edge) < MIN_ROOM) {
       next.release()
       setPhotoError('small')
       return
@@ -166,7 +156,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
     try {
       const pixels = photoToPixels(from, size)
       const made = await makeStickerInWorker(pixels, tok.token)
-      const file = new File([made.png as BlobPart], `kakaonut-${tok.amount}-sats.png`, { type: 'image/png' })
+      const file = new File([made.png as BlobPart], `zats-${tok.amount}.png`, { type: 'image/png' })
       const url = URL.createObjectURL(file)
       madeUrls.current.push(url)
       // Decode before showing, so the reveal plays on the photo and not on an empty box.
@@ -185,51 +175,30 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       setStage({
         k: 'error',
         ...failure(e),
-        // The token is in History, or (if it couldn't be stored) shown right here.
+        // The secret is in History, or (if it couldn't be stored) shown right here.
         note: unsaved ? undefined : t('make.err.paid'),
         token: unsaved ? tok.token : undefined,
-        retry: () =>
-          setStage({
-            k: 'needPhoto',
-            saved: tok,
-            unsaved,
-            edge: size,
-            why: 'put',
-          }),
+        retry: () => setStage({ k: 'needPhoto', saved: tok, unsaved, edge: size, why: 'put' }),
       })
     }
   }
 
-  const finish = async (pending: PendingQuote, unsaved = false) => {
-    setStage({ k: 'minting', amount: pending.amount })
-    let token: string
-    try {
-      token = await mintToken(pending.mint, pending.amount, pending.quote)
-    } catch (e) {
-      // The quote stays saved, so a retry (or a reload) picks it up again.
-      setStage({
-        k: 'error',
-        ...failure(e),
-        note: unsaved ? t('invoice.unsaved') : t('make.err.paid'),
-        retry: () => setStage({ k: 'invoice', pending, unsaved }),
-      })
-      return
-    }
+  /** ZNN arrived at the deposit address: record how much, then hide the secret in the photo. */
+  const finish = async (pending: PendingDeposit, state: AccountState, unsaved = false) => {
     const tok: SavedToken = {
-      id: pending.quote,
-      token,
-      mint: pending.mint,
-      amount: pending.amount,
-      createdAt: Date.now(),
+      id: pending.address,
+      token: pending.token,
+      amount: Number(state.zats),
+      createdAt: pending.createdAt,
       photo: false,
     }
-    const stored = addToken(tok) // saved before anything else happens to it
+    const stored = addToken(tok)
     clearPending()
-    setSaved(stored ? loadTokens() : (list) => [tok, ...list])
-    // The page may have reloaded while the invoice was paid (common on phones): get the photo back.
+    setSaved(stored ? loadTokens() : (list) => [tok, ...list.filter((x) => x.id !== tok.id)])
+    // The page may have reloaded while waiting (common on phones): get the photo back.
     let current = photoRef.current
     if (!current) {
-      const kept = await loadPendingPhoto(pending.quote)
+      const kept = await loadPendingPhoto(pending.address)
       if (kept) {
         try {
           current = await loadPhoto(kept)
@@ -241,84 +210,64 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       }
     }
     void clearPendingPhoto()
-    if (!current)
-      setStage({
-        k: 'needPhoto',
-        saved: tok,
-        unsaved: !stored,
-        edge: pending.edge,
-        why: 'lost',
-      })
-    else await embed(tok, current, pending.edge, !stored)
+    if (!current) setStage({ k: 'needPhoto', saved: tok, unsaved: unsaved || !stored, edge: pending.edge, why: 'lost' })
+    else await embed(tok, current, pending.edge, unsaved || !stored)
   }
 
-  // Poll the invoice every 2 s while it's on screen (also after a reload).
+  // Watch the deposit address every few seconds while it's on screen (also after a reload).
   useEffect(() => {
-    if (stage.k !== 'invoice') return
+    if (stage.k !== 'deposit') return
     const { pending, unsaved } = stage
     let stopped = false
     let timer: ReturnType<typeof setTimeout>
     const tick = async () => {
       try {
-        const state = await invoiceState(pending.mint, pending.quote)
+        const state = await accountState(pending.address)
         if (stopped) return
         setOffline(false)
-        if (state === 'PAID') {
+        // ZNN is what the photo is for; QSR alone (or airdrop spam, which is ignored) doesn't count.
+        if (state.zats > 0n) {
           stopped = true
-          void finish(pending, unsaved)
-          return
-        }
-        if (state === 'ISSUED') {
-          stopped = true
-          clearPending()
-          void clearPendingPhoto()
-          setSaved(loadTokens())
-          setStage({ k: 'issued' })
+          void finish(pending, state, unsaved)
           return
         }
       } catch {
         if (!stopped) setOffline(true)
       }
-      if (!stopped) timer = setTimeout(tick, 2000)
+      if (!stopped) timer = setTimeout(tick, POLL_MS)
     }
-    timer = setTimeout(tick, 1000)
+    timer = setTimeout(tick, 500)
     return () => {
       stopped = true
       clearTimeout(timer)
     }
   }, [stage])
 
-  const pay = async () => {
+  const start = async () => {
     if (!photo || !amount) return
-    setStage({ k: 'quoting' })
+    setStage({ k: 'creating' })
     try {
-      const inv = await createInvoice(mintUrl, amount)
-      const pending: PendingQuote = {
-        mint: mintUrl,
-        amount,
-        quote: inv.quote,
-        request: inv.request,
-        createdAt: Date.now(),
-        edge,
-      }
-      const stored = savePending(pending) // before the invoice is shown
-      if (photoFile.current) await savePendingPhoto(pending.quote, photoFile.current)
-      setStage({ k: 'invoice', pending, unsaved: !stored })
+      const { token, address } = await newSecret()
+      const createdAt = Date.now()
+      // Saved to History first: whatever is sent to this address can always be found again.
+      const stored = addToken({ id: address, token, amount: 0, createdAt, photo: false })
+      if (stored) setSaved(loadTokens())
+      const pending: PendingDeposit = { token, address, amount, createdAt, edge }
+      savePending(pending)
+      if (photoFile.current) await savePendingPhoto(address, photoFile.current)
+      setStage({ k: 'deposit', pending, unsaved: !stored })
     } catch (e) {
-      setStage({
-        k: 'error',
-        ...failure(e),
-        retry: () => setStage({ k: 'form' }),
-      })
+      setStage({ k: 'error', ...failure(e), retry: () => setStage({ k: 'form' }) })
     }
   }
 
-  const cancel = async (pending: PendingQuote) => {
-    // Paid at the last second? Then finish instead of throwing the payment away.
+  const cancel = async (pending: PendingDeposit, unsaved: boolean) => {
+    // Arrived at the last second? Then finish instead of walking away from it.
     try {
-      if ((await invoiceState(pending.mint, pending.quote)) === 'PAID') return void finish(pending, stage.k === 'invoice' && stage.unsaved)
+      const state = await accountState(pending.address)
+      if (state.zats > 0n) return void finish(pending, state, unsaved)
     } catch {
-      // can't tell: keep it simple and cancel
+      // can't tell: the secret stays in History either way
     }
     clearPending()
     void clearPendingPhoto()
@@ -339,12 +288,12 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
 
   // Two slots: the photo (left on wide screens) and the money side (right). Phones stack them.
   let photoSlot: ReactNode = null
-  let photoAside = false // only useful beside the panel: skipped on phones so the invoice stays high
+  let photoAside = false
   let panel: ReactNode = null
 
   switch (stage.k) {
     case 'form':
-    case 'quoting':
+    case 'creating':
       photoSlot = (
         <PhotoPicker
           photo={photo}
@@ -359,9 +308,8 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
             <label className="tile-label" htmlFor="make-amount">
               {t('make.step.amount')}
             </label>
-            {/* --chars lets the number shrink to fit the width instead of running under "sats". */}
+            {/* --chars lets the number shrink to fit the width instead of running under "zats". */}
             <div className="amount" style={{ '--chars': Math.max(5, amountText.length) } as CSSProperties}>
-              {/* The hidden copy of the text gives the field its exact width, so "sats" sits right after it. */}
               <span className="amount-input">
                 <span className="amount-sizer" aria-hidden="true">
                   {amountText || '0'}
@@ -372,25 +320,27 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
                   autoComplete="off"
                   value={amountText}
                   onChange={(e) => {
-                    // Keep the big number readable while typing: 20000 → 20,000.
-                    // NFKC turns full-width digits (１２３, from CJK keyboards) into plain ones.
                     const digits = e.target.value
                       .normalize('NFKC')
                       .replace(/\D/g, '')
                       .replace(/^0+(?=\d)/, '')
-                      .slice(0, 9)
+                      .slice(0, 12)
                     setAmountText(digits ? num(Number(digits)) : '')
                   }}
                   aria-invalid={amount === null}
-                  aria-describedby={amount === null ? 'make-amount-error' : undefined}
+                  aria-describedby={amount === null ? 'make-amount-error' : 'make-amount-znn'}
                   data-testid="amount-input"
                 />
               </span>
-              <span className="amount-unit">sats</span>
+              <span className="amount-unit">zats</span>
             </div>
-            {amountError && (
+            {amountError ? (
               <p className="field-error" id="make-amount-error">
                 {amountError}
+              </p>
+            ) : (
+              <p className="pay-note" id="make-amount-znn">
+                {t('make.amount.znn', { znn: zatsToZnn(amount ?? 0) })}
               </p>
             )}
             <div className="presets">
@@ -402,7 +352,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
                   aria-pressed={amount === p}
                   onClick={() => setAmountText(num(p))}
                 >
-                  {num(p)}
+                  {zatsToZnn(p)} ZNN
                 </button>
               ))}
             </div>
@@ -426,14 +376,14 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
             </div>
             <button
               type="button"
-              className={`btn btn--primary btn--xl btn--block${stage.k === 'quoting' ? ' is-busy' : ''}`}
-              disabled={!photo || !amount || tooSmall || stage.k === 'quoting'}
-              aria-busy={stage.k === 'quoting'}
-              onClick={pay}
+              className={`btn btn--primary btn--xl btn--block${stage.k === 'creating' ? ' is-busy' : ''}`}
+              disabled={!photo || !amount || tooSmall || stage.k === 'creating'}
+              aria-busy={stage.k === 'creating'}
+              onClick={start}
             >
-              {stage.k === 'quoting' && <Buddies size={22} />}
-              {stage.k === 'quoting'
-                ? t('invoice.creating')
+              {stage.k === 'creating' && <Buddies size={22} />}
+              {stage.k === 'creating'
+                ? t('deposit.creating')
                 : !photo
                   ? t('make.pay.needPhoto')
                   : t('make.pay', { amount: amount ? num(amount) : '–' })}
@@ -443,23 +393,20 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
         </>
       )
       break
-    case 'invoice':
+    case 'deposit':
       photoSlot = photo && <PhotoPreview url={photo.url} amount={stage.pending.amount} />
       photoAside = true
       panel = (
-        <InvoiceView
+        <DepositView
           pending={stage.pending}
           offline={offline}
           unsaved={!!stage.unsaved}
-          onCancel={() => void cancel(stage.pending)}
+          onCancel={() => void cancel(stage.pending, !!stage.unsaved)}
         />
       )
       break
-    case 'minting':
     case 'embedding':
-      photoSlot = photo && (
-        <PhotoPreview url={photo.url} amount={stage.k === 'minting' ? stage.amount : stage.saved.amount} />
-      )
+      photoSlot = photo && <PhotoPreview url={photo.url} amount={stage.saved.amount} />
       photoAside = true
       panel = (
         <div className="tile working">
@@ -474,23 +421,13 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
           <p className="notice-title">
             {stage.why === 'lost' ? t('make.needPhoto') : t('make.putPhoto', { amount: num(stage.saved.amount) })}
           </p>
-          {stage.unsaved && <RawToken token={stage.saved.token} />}
+          {stage.unsaved && <RawWords token={stage.saved.token} />}
         </div>
       )
       break
     case 'done':
       photoSlot = <DonePhoto stage={stage} />
       panel = <Done stage={stage} onAgain={reset} />
-      break
-    case 'issued':
-      panel = (
-        <div className="tile notice">
-          <p className="notice-title">{t('invoice.issued')}</p>
-          <button type="button" className="btn btn--primary btn--block" onClick={reset}>
-            {t('make.done.again')}
-          </button>
-        </div>
-      )
       break
     case 'error':
       photoSlot = photo && <PhotoPreview url={photo.url} />
@@ -500,14 +437,13 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
           <div>
             <p className="notice-title notice-title--bad">{stage.message}</p>
             {stage.note && <p className="notice-note">{stage.note}</p>}
-            {/* The mint's or browser's own words, kept for support; they are usually English. */}
             {stage.detail && (
               <p className="notice-detail" lang="en">
                 {stage.detail}
               </p>
             )}
           </div>
-          {stage.token && <RawToken token={stage.token} />}
+          {stage.token && <RawWords token={stage.token} />}
           <div className="btn-row">
             {stage.retry && (
               <button type="button" className="btn btn--primary" onClick={stage.retry}>
@@ -515,7 +451,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
               </button>
             )}
             <button type="button" className="btn btn--quiet" onClick={reset}>
-              {t('invoice.cancel')}
+              {t('deposit.cancel')}
             </button>
           </div>
         </div>
@@ -532,18 +468,9 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
         <div className="make-panel">{panel}</div>
         <SavedList
           tokens={saved}
-          onPut={(tok) => {
-            setStage({
-              k: 'needPhoto',
-              saved: tok,
-              unsaved: false,
-              edge,
-              why: 'put',
-            })
-            card.current?.scrollIntoView({
-              block: 'start',
-              behavior: scrollBehavior(),
-            })
+          onPut={(tok, amount) => {
+            setStage({ k: 'needPhoto', saved: { ...tok, amount }, unsaved: false, edge, why: 'put' })
+            card.current?.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
           }}
           onDelete={(id) => {
             deleteToken(id)
@@ -555,7 +482,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
   )
 }
 
-/** The photo being paid for, with the amount it will hold. */
+/** The photo being funded, with the amount it will hold. */
 function PhotoPreview({ url, amount }: { url: string; amount?: number }) {
   const { t, num } = useI18n()
   return (
@@ -626,13 +553,13 @@ function PhotoPicker({
   )
 }
 
-function InvoiceView({
+function DepositView({
   pending,
   offline,
   unsaved,
   onCancel,
 }: {
-  pending: PendingQuote
+  pending: PendingDeposit
   offline: boolean
   unsaved: boolean
   onCancel: () => void
@@ -642,52 +569,46 @@ function InvoiceView({
   const [copied, flash] = useFlash()
   useEffect(() => {
     let live = true
-    QRCode.toDataURL(pending.request.toUpperCase(), {
-      margin: 0,
-      width: 560,
-      errorCorrectionLevel: 'M',
-    })
+    QRCode.toDataURL(pending.address, { margin: 0, width: 560, errorCorrectionLevel: 'M' })
       .then((url) => live && setQr(url))
       .catch(() => live && setQr(null))
     return () => {
       live = false
     }
-  }, [pending.request])
+  }, [pending.address])
   return (
-    <div className="tile invoice" data-testid="invoice">
-      <p className="invoice-title">{t('invoice.title')}</p>
+    <div className="tile invoice" data-testid="deposit">
+      <p className="invoice-title">{t('deposit.title', { znn: zatsToZnn(pending.amount) })}</p>
       <p className="invoice-amount" style={{ '--chars': num(pending.amount).length } as CSSProperties}>
-        {num(pending.amount)} <span>{satsUnit(pending.amount)}</span>
+        {num(pending.amount)} <span>{zatsUnit(pending.amount)}</span>
       </p>
-      {isTestMint(pending.mint) && <p className="invoice-note">{t('token.testMint')}</p>}
       {unsaved && (
         <p className="invoice-warn" role="alert">
-          {t('invoice.unsaved')}
+          {t('deposit.unsaved')}
         </p>
       )}
-      {/* The code takes a few milliseconds to draw: an empty square of the same size, no loader. */}
-      <a className="qr" href={`lightning:${pending.request}`} aria-label={t('invoice.open')}>
+      {unsaved && <RawWords token={pending.token} />}
+      <div className="qr" aria-label={pending.address}>
         {qr && <img src={qr} alt="" />}
-      </a>
-      <Loading className="waiting" label={offline ? t('invoice.offline') : t('invoice.waiting')} size={20} />
+      </div>
+      <p className="deposit-address" data-testid="deposit-address">
+        {pending.address}
+      </p>
+      <Loading className="waiting" label={offline ? t('deposit.offline') : t('deposit.waiting')} size={20} />
       <div className="stack">
-        <div className="invoice-buttons">
-          <a className="btn btn--primary" href={`lightning:${pending.request}`}>
-            {t('invoice.open')}
-          </a>
+        <div className="invoice-buttons invoice-buttons--one">
           <button
             type="button"
-            className="btn btn--quiet"
-            onClick={async () =>
-              flash((await copyText(pending.request)) ? t('action.copied') : t('action.copyFailedShort'))
-            }
+            className="btn btn--primary"
+            onClick={async () => flash((await copyText(pending.address)) ? t('action.copied') : t('action.copyFailedShort'))}
           >
             {copied === t('action.copied') ? <CheckIcon size={18} className="flash-in" /> : <CopyIcon size={18} />}
-            <FlashLabel flash={copied}>{t('invoice.copy')}</FlashLabel>
+            <FlashLabel flash={copied}>{t('deposit.copy')}</FlashLabel>
           </button>
         </div>
+        <p className="invoice-note">{t('deposit.hint')}</p>
         <button type="button" className="btn btn--text" onClick={onCancel}>
-          {t('invoice.cancel')}
+          {t('deposit.cancel')}
         </button>
       </div>
     </div>
@@ -747,7 +668,7 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
           )}
         </div>
         <p className="done-tip">{t('make.done.tip')}</p>
-        {unsaved && <RawToken token={saved.token} />}
+        {unsaved && <RawWords token={saved.token} />}
       </div>
       <button type="button" className="btn btn--text done-again" onClick={onAgain}>
         {t('make.done.again')}
@@ -756,17 +677,28 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
   )
 }
 
-function RawToken({ token }: { token: string }) {
+/** The 24 recovery words of a secret that couldn't be stored: the only copy, so it must be kept. */
+function RawWords({ token }: { token: string }) {
   const { t } = useI18n()
   const [copied, flash] = useFlash()
+  const [words, setWords] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    wordsOf(token)
+      .then((w) => live && setWords(w))
+      .catch(() => live && setWords(token))
+    return () => {
+      live = false
+    }
+  }, [token])
   return (
     <div className="raw-token" role="alert">
       <p>{t('make.storageFailed')}</p>
-      <textarea readOnly value={token} rows={3} onFocus={(e) => e.currentTarget.select()} />
+      <textarea readOnly value={words ?? ''} rows={3} onFocus={(e) => e.currentTarget.select()} />
       <button
         type="button"
         className="btn btn--primary btn--block"
-        onClick={async () => flash((await copyText(token)) ? t('action.copied') : t('token.copyFailed'))}
+        onClick={async () => flash(words && (await copyText(words)) ? t('action.copied') : t('token.copyFailed'))}
       >
         <FlashLabel flash={copied}>{t('token.copy')}</FlashLabel>
       </button>
@@ -780,13 +712,15 @@ function SavedList({
   onDelete,
 }: {
   tokens: SavedToken[]
-  onPut: (t: SavedToken) => void
+  onPut: (t: SavedToken, amount: number) => void
   onDelete: (id: string) => void
 }) {
   const { t } = useI18n()
+  // Asks the chain again each time the list is opened: a friend may have claimed a photo meanwhile.
+  const [round, setRound] = useState(0)
   if (!tokens.length) return null
   return (
-    <details className="saved">
+    <details className="saved" onToggle={(e) => e.currentTarget.open && setRound((n) => n + 1)}>
       <summary className="saved-summary">
         <span className="saved-title">{t('saved.title')}</span>
         <span className="saved-count">{tokens.length}</span>
@@ -794,7 +728,13 @@ function SavedList({
       </summary>
       <ul className="group">
         {tokens.map((tok) => (
-          <SavedItem key={tok.id} tok={tok} onPut={() => onPut(tok)} onDelete={() => onDelete(tok.id)} />
+          <SavedItem
+            key={tok.id}
+            tok={tok}
+            round={round}
+            onPut={(amount) => onPut(tok, amount)}
+            onDelete={() => onDelete(tok.id)}
+          />
         ))}
       </ul>
       <p className="group-caption">{t('saved.hint')}</p>
@@ -802,24 +742,47 @@ function SavedList({
   )
 }
 
+type SavedStatus = 'checking' | 'unspent' | 'pending' | 'spent' | 'empty' | 'unknown'
+
 /**
- * One sent photo. The row answers "has my friend claimed it?"; actions appear only where they can
- * still do something: recover unclaimed bitcoin, or clear a claimed row away. "Put in a photo" is
- * only for bitcoin that never made it into one (the page closed, or making the photo failed).
+ * One secret made on this device. The row answers "has my friend claimed it?" from the chain;
+ * actions appear only where they can still do something: take back what's unclaimed, put a funded
+ * secret that never reached a photo into one, or clear a finished row away.
  */
-function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => void; onDelete: () => void }) {
+function SavedItem({
+  tok,
+  round,
+  onPut,
+  onDelete,
+}: {
+  tok: SavedToken
+  round: number
+  onPut: (amount: number) => void
+  onDelete: () => void
+}) {
   const { t, num, lang } = useI18n()
-  const [claim, setClaim] = useState<ClaimState | 'checking' | 'unknown'>('checking')
+  const [status, setStatus] = useState<SavedStatus>('checking')
+  const [zats, setZats] = useState(tok.amount)
   const [armed, setArmed] = useState(false)
+  const [takingBack, setTakingBack] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [back, setBack] = useState<SweepResult | null>(null)
+  const formId = useId()
+
   useEffect(() => {
     let live = true
-    checkClaimState(tok.token)
-      .then((s) => live && setClaim(s))
-      .catch(() => live && setClaim('unknown'))
+    accountState(tok.id)
+      .then((s) => {
+        if (!live) return
+        // What's inside now; once it's claimed, what it held.
+        setZats(s.zats > 0n ? Number(s.zats) : tok.amount)
+        setStatus(s.blockCount === 0 && s.holdings.length === 0 ? 'empty' : claimStateOf(s))
+      })
+      .catch(() => live && setStatus('unknown'))
     return () => {
       live = false
     }
-  }, [tok.token])
+  }, [tok.id, back, round])
 
   const date = new Date(tok.createdAt)
   const when = new Intl.DateTimeFormat(lang, {
@@ -829,59 +792,69 @@ function SavedItem({ tok, onPut, onDelete }: { tok: SavedToken; onPut: () => voi
     minute: '2-digit',
     ...(date.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }),
   }).format(date)
-  const claimed = claim === 'spent'
-  const recoverable = claim === 'unspent' || claim === 'unknown'
-  // Deleting unclaimed bitcoin loses it, so that asks first; a claimed row just goes.
-  const remove = () => (claimed || armed ? onDelete() : setArmed(true))
+  const finished = status === 'spent'
+  const recoverable = status === 'unspent' || status === 'unknown'
+  // Deleting a secret that may still hold ZNN loses it, so that asks first; a claimed row just goes.
+  const remove = () => (finished || armed ? onDelete() : setArmed(true))
 
   return (
-    <li className={`saved-item saved-item--${claim}`}>
+    <li className={`saved-item saved-item--${status === 'empty' ? 'pending' : status}`}>
       <div className="saved-row">
         <div className="saved-main">
           <strong>
-            {num(tok.amount)} <span>sats</span>
+            {num(zats)} <span>{zatsUnit(zats)}</span>
           </strong>
-          <p className="saved-meta">
-            {when}
-            {isTestMint(tok.mint) && ` (${t('make.mint.test')})`}
-          </p>
+          <p className="saved-meta">{when}</p>
         </div>
-        <span className={`status status--${claim}`}>{t(`saved.${claim}`)}</span>
-        {claimed && (
+        <span className={`status status--${status === 'empty' ? 'pending' : status}`}>{t(`saved.${status}`)}</span>
+        {finished && (
           <button type="button" className="saved-trash" aria-label={t('saved.delete')} onClick={remove}>
             <TrashIcon size={18} />
           </button>
         )}
       </div>
-      {recoverable && (
+      {back && <p className="saved-warn">{t('sweep.sentTo', { address: short(back.to) })}</p>}
+      {(recoverable || status === 'empty') && !back && (
         <div className="saved-actions">
-          {armed ? (
-            // While a delete is armed, the row says what will happen and nothing else competes.
+          {takingBack ? (
+            <div style={{ flex: 1 }}>
+              <SweepForm id={formId} token={tok.token} onBusy={setBusy} onDone={setBack} />
+              {!busy && (
+                <button type="button" className="btn btn--text btn--sm" onClick={() => setTakingBack(false)}>
+                  {t('claim.cancel')}
+                </button>
+              )}
+            </div>
+          ) : armed ? (
             <p className="saved-warn" role="alert">
               {t('saved.deleteConfirm')}
             </p>
           ) : (
-            <>
-              {tok.photo === false && (
-                <button type="button" className="btn btn--white btn--sm" onClick={onPut}>
-                  {t('saved.put')}
+            recoverable && (
+              <>
+                {tok.photo === false && (
+                  <button type="button" className="btn btn--white btn--sm" onClick={() => onPut(zats)}>
+                    {t('saved.put')}
+                  </button>
+                )}
+                <button type="button" className="btn btn--white btn--sm" onClick={() => setTakingBack(true)}>
+                  {t('saved.takeBack')}
                 </button>
-              )}
-              <a className="btn btn--white btn--sm" href={claimLink(tok.token)} target="_blank" rel="noopener noreferrer">
-                {t('saved.takeBack')}
-              </a>
-            </>
+              </>
+            )
           )}
-          <button
-            type="button"
-            className={`saved-trash${armed ? ' is-armed' : ''}`}
-            aria-label={t('saved.delete')}
-            onClick={remove}
-            onBlur={() => setArmed(false)}
-          >
-            <TrashIcon size={18} />
-            {armed && <span>{t('saved.delete')}</span>}
-          </button>
+          {!takingBack && (
+            <button
+              type="button"
+              className={`saved-trash${armed ? ' is-armed' : ''}`}
+              aria-label={t('saved.delete')}
+              onClick={remove}
+              onBlur={() => setArmed(false)}
+            >
+              <TrashIcon size={18} />
+              {armed && <span>{t('saved.delete')}</span>}
+            </button>
+          )}
         </div>
       )}
     </li>

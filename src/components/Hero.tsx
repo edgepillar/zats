@@ -1,18 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
-import { formatFiat, peekBtcPrice } from '../price'
 import { HeroPhoto, HeroPixels, preloadHeroPhoto } from './HeroPhoto'
 import { Character } from './Buddies'
 import { goToMode } from '../nav'
 
 /**
- * Hero: a KakaoTalk-style chat on a phone. A photo is sent, light passes over it like a banknote
- * held up to a window, its pixels show for a moment, and a footer opens with the bitcoin inside.
+ * Hero: a chat on a phone. A photo is sent, light passes over it like a banknote
+ * held up to a window, its pixels show for a moment, and a footer opens with the zats inside.
  * Plays as a loop of timed steps; with reduced motion it shows the last frame only.
  */
 
-const AMOUNT = 20000
+const AMOUNT = 100_000_000 // 1 ZNN
 
 // Step → when it starts (ms from the start of the loop).
 const TIMELINE = [
@@ -112,9 +111,6 @@ export function Hero() {
   const time = new Intl.DateTimeFormat(lang, { hour: 'numeric', minute: '2-digit' }).format(now)
   const date = new Intl.DateTimeFormat(lang, { dateStyle: 'full' }).format(now)
   const read = step >= 6
-  // Dollars or won only if this visit already fetched the price: the hero never fetches it.
-  const price = peekBtcPrice()
-  const fiat = price && formatFiat(AMOUNT, price, lang)
 
   return (
     <section className="hero" aria-labelledby="hero-title">
@@ -212,8 +208,8 @@ export function Hero() {
                         </div>
                         <div className="kt-photo-foot">
                           <span className="kt-foot-label">{t('chat.inside')}</span>
-                          <b className="kt-foot-main">{fiat || `${num(AMOUNT)} sats`}</b>
-                          {fiat && <span className="kt-foot-sub">{num(AMOUNT)} sats</span>}
+                          <b className="kt-foot-main">{num(AMOUNT)} zats</b>
+                          <span className="kt-foot-sub">1 ZNN</span>
                         </div>
                       </div>
                     </div>

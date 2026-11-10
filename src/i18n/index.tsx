@@ -4,9 +4,9 @@ import { detectLang, formatBytes, formatNumber, translate, type Lang, type Vars 
 import { loadJson, saveJson } from '../storage'
 
 export type { Lang, Key }
-export { satsUnit } from './translate'
+export { zatsUnit } from './translate'
 
-const STORAGE_KEY = 'kakaonut.lang'
+const STORAGE_KEY = 'zats.lang'
 
 interface I18n {
   lang: Lang
@@ -20,7 +20,7 @@ const I18nContext = createContext<I18n | null>(null)
 
 function initialLang(): Lang {
   const saved = loadJson<string | null>(STORAGE_KEY, null)
-  if (saved === 'en' || saved === 'ko') return saved
+  if (saved === 'en') return saved
   return detectLang(typeof navigator === 'undefined' ? undefined : navigator.language)
 }
 

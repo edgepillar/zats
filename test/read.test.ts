@@ -21,7 +21,7 @@ const bytes = (...parts: (number[] | string)[]) =>
 
 describe('readStickerFromBytes', () => {
   it('reads a sticker back to the exact token', () => {
-    const token = 'cashuB' + 'o2FteBxodHRwczovL3Rlc3RudXQuY2FzaHUuc3BhY2VhdWNzYXQ'.repeat(12)
+    const token = 'zats1' + '7f'.repeat(32)
     const { png } = makeStickerPng(photo(160, 120), token)
     const r = readStickerFromBytes(png)
     expect(r).toMatchObject({ ok: true, status: 'intact', token, format: 'png', width: 160, height: 120, size: png.length })
@@ -38,7 +38,7 @@ describe('readStickerFromBytes', () => {
     expect(readStickerFromBytes(jpeg)).toMatchObject({ ok: false, reason: 'erased', format: 'jpeg', width: 640, height: 480 })
   })
 
-  it('turns away a PNG far bigger than Kakaonut makes, without decoding it', () => {
+  it('turns away a PNG far bigger than Zats makes, without decoding it', () => {
     // Only the header: a real 6000 × 8000 PNG would take seconds and ~144 MB to decode.
     const png = encodePng(photo(2, 2))
     new DataView(png.buffer, png.byteOffset).setUint32(16, 6000)
@@ -69,12 +69,12 @@ describe('sniffImage', () => {
 })
 
 describe('test payload', () => {
-  it('is about 900 bytes, clearly marked, and records its size', () => {
+  it('is as long as a real secret, clearly marked, and records its size', () => {
     const p = makeTestPayload(1280, 960)
-    expect(p.length).toBe(900)
-    expect(p.startsWith('cashuB')).toBe(true)
+    expect(p.length).toBe(69)
+    expect(p.startsWith('zats')).toBe(true)
     expect(p).toContain('NOT-MONEY')
     expect(parseTestPayload(p)).toEqual({ width: 1280, height: 960 })
-    expect(parseTestPayload('cashuBo2Ftd...')).toBeNull()
+    expect(parseTestPayload('zats1' + '7f'.repeat(32))).toBeNull()
   })
 })

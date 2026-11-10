@@ -3,8 +3,7 @@ import { extract } from './stego'
 import { sniffImage, type ImageFormat } from './imageInfo'
 
 /**
- * Reads a Kakaonut sticker. Pure and canvas-free (see section 4 of the spec), so it runs the same in
- * a page, a worker, Node tests and the cashu.me fork.
+ * Reads a Zats photo. Pure and canvas-free, so it runs the same in a page, a worker and Node tests.
  */
 
 export type StickerFailure =
@@ -34,7 +33,7 @@ export type StickerReadResult = StickerFileFacts &
   )
 
 /**
- * Kakaonut makes photos at most 2048 px on the long edge. A PNG far bigger than that can't hold a
+ * Zats makes photos at most 2048 px on the long edge. A PNG far bigger than that can't hold a
  * sticker, and decoding it could take seconds and more memory than a phone gives a page.
  */
 const MAX_EDGE = 4096
@@ -47,7 +46,7 @@ export function readStickerFromBytes(bytes: Uint8Array): StickerReadResult {
     return { ...facts, ok: false, reason: info.format === 'unknown' ? 'unreadable' : 'erased' }
   }
   if ((info.width ?? 0) > MAX_EDGE || (info.height ?? 0) > MAX_EDGE) {
-    return { ...facts, ok: false, reason: 'none', detail: 'Too big to be a Kakaonut photo.' }
+    return { ...facts, ok: false, reason: 'none', detail: 'Too big to be a Zats photo.' }
   }
 
   let decoded
@@ -70,8 +69,8 @@ export function readStickerFromBytes(bytes: Uint8Array): StickerReadResult {
   } catch {
     return { ...facts, ok: false, reason: 'damaged', detail: 'The hidden data is not valid text.' }
   }
-  if (!token.startsWith('cashu')) {
-    return { ...facts, ok: false, reason: 'unreadable', detail: 'The hidden data is not a Cashu token.' }
+  if (!token.startsWith('zats')) {
+    return { ...facts, ok: false, reason: 'unreadable', detail: 'The hidden data is not a Zats secret.' }
   }
   return { ...facts, ok: true, status: result.status, token, copies: result.copies }
 }
