@@ -12,8 +12,12 @@ Kakaonut's; the money side is Zenon.
 
 > Proof of concept. Use small amounts.
 
-**Mainnet claim status: not yet verified.** Start with the simulated demo. A real transfer or
-claim requires explicit approval; follow the [0.1 ZNN test guide](docs/mainnet-test.md).
+Start with the simulated demo. Mainnet use requires a separately approved test of the exact
+deployed revision; automated checks do not qualify real transfers. Follow the
+[0.1 ZNN test guide](docs/mainnet-test.md). Run receipts and wallet details remain private.
+
+How it works in detail, why it is built this way, what has been checked and what hasn't:
+[docs/architecture.md](docs/architecture.md).
 
 ## How it works
 
