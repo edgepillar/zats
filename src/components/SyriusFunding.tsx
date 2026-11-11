@@ -29,8 +29,8 @@ export function SyriusFunding({ address, amount, token, onBusy }: { address: str
       window.removeEventListener(FUNDING_EVENT, update)
     }
   }, [address])
-  if (DEMO || (!wallet.available && guard === 'none')) return null
   const started = guard !== 'none' && guard !== 'unavailable'
+  if (DEMO || (!wallet.available && !started)) return null
   return (
     <div className="syrius-wallet" data-testid="syrius-funding">
       <p className="tile-label">{t('syrius.title')}</p>
@@ -42,7 +42,7 @@ export function SyriusFunding({ address, amount, token, onBusy }: { address: str
         }}>{t(choosing ? 'syrius.connecting' : 'syrius.connect')}</button> : <>
           <p className="syrius-address" data-testid="syrius-from">{t('syrius.from', { address: wallet.session.address })}</p>
           <p className="syrius-address">{t('syrius.payment', { znn: zatsToZnn(amount), address })}</p>
-          <label className="syrius-backup"><input type="checkbox" data-testid="syrius-backup" checked={backedUp} onChange={e => setBackedUp(e.target.checked)} />{t('syrius.backup')}</label>
+          <label className="syrius-backup"><input type="checkbox" data-testid="syrius-backup" disabled={busy} checked={backedUp} onChange={e => setBackedUp(e.target.checked)} />{t('syrius.backup')}</label>
           <button type="button" className="btn btn--primary btn--block" data-testid="syrius-pay" disabled={!backedUp || busy || guard === 'unavailable'} onClick={async () => {
             if (!wallet.session || !backedUp || requesting.current) return
             requesting.current = true

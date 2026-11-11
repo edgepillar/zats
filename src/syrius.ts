@@ -58,8 +58,9 @@ function firstAccount(value: unknown): string {
 export async function validateSyriusSession(session: SyriusSession): Promise<void> {
   if (DEMO || !session.current() || syriusProvider() !== session.provider) throw new SyriusError('changed')
   const [accounts, chain] = await read(Promise.all([session.provider.getAccounts(), session.provider.getChainId()]))
+  const selected = firstAccount(accounts)
   if (chain !== 1) throw new SyriusError('network')
-  const address = await parseAddress(firstAccount(accounts)).catch(() => null)
+  const address = await parseAddress(selected).catch(() => null)
   if (!session.current() || syriusProvider() !== session.provider || address !== session.address) throw new SyriusError('changed')
 }
 

@@ -60,6 +60,7 @@ describe('Syrius selection and funding', () => {
     provider.getAccounts.mockResolvedValueOnce([destination])
     await expect(fundWithSyrius(session, destination, 10000000, photoToken)).rejects.toMatchObject({ code: 'changed' })
     provider.getAccounts.mockResolvedValueOnce([])
+    provider.getChainId.mockResolvedValueOnce(null)
     await expect(validateSyriusSession(session)).rejects.toMatchObject({ code: 'locked' })
     expect(provider.sendTransaction).not.toHaveBeenCalled()
   })

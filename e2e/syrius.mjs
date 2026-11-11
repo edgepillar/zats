@@ -97,7 +97,7 @@ try {
   assert.deepEqual(await page.evaluate(() => window.__syrius.calls), Array(2).fill({ to: address, tokenStandard: 'zts1znnxxxxxxxxxxxxx9z4ulx', amount: '10000000' }))
   assert.equal(await page.evaluate(address => localStorage.getItem('zats.syrius.funding.' + address), address), 'submitted')
   assert.equal(await page.evaluate(() => window.__fake.state.published.length), 0)
-  const png = await page.$eval('[data-testid="made-photo"]', async image => {
+  const png = await page.$eval('.make-grid .done-photo img', async image => {
     const bytes = new Uint8Array(await (await fetch(image.src)).arrayBuffer())
     let text = ''; for (const byte of bytes) text += String.fromCharCode(byte)
     return btoa(text)
@@ -162,4 +162,7 @@ try {
   await isolated.close()
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ ...results, externalRequests: 0, realWallets: 0, realTransactions: 0, result: 'PASS' }))
+} catch (error) {
+  console.error(JSON.stringify({ completedControls: results, errors, result: 'FAIL' }))
+  throw error
 } finally { await browser.close() }
