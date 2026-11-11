@@ -85,6 +85,14 @@ the previous read finishes, and refreshes on focus, visibility and network resto
 pauses its reads while its take-back operation is busy. Local wallet writes and storage events
 from other tabs update the list without a reload.
 
+Opening a valid Zats account on Redeem also saves its key and exact incoming PNG before reading
+the node. Test payloads and invalid images are excluded. The account address deduplicates rows;
+reopening it keeps its first timestamp and does not replace an existing PNG. Imports use an
+atomic insert-if-absent transaction, and storage failures show a warning. No receive or send is
+triggered by saving. Created and opened records are labelled separately. Imported PNGs contain
+no creation amount, so their preview directs the holder to the current History status rather
+than inventing one. Incoming photos remain browser-local, including when a node is offline.
+
 Saved PNGs can be opened in a dialog without stopping a deposit, including after a claim or while
 offline. The image's creation amount is separate from the account's current status. For legacy
 records without a stored PNG, a funded secret can be embedded in a replacement image regardless

@@ -52,6 +52,23 @@ async function digest(page, selector) {
   })
 }
 
+async function pngBytes(page) {
+  return page.$eval('.make-grid .done-photo img', async element => {
+    const bytes = new Uint8Array(await (await fetch(element.src)).arrayBuffer())
+    let text = ''; for (const byte of bytes) text += String.fromCharCode(byte)
+    return btoa(text)
+  })
+}
+
+async function uploadIncoming(page, bytes) {
+  await page.evaluate(encoded => {
+    const file = new File([Uint8Array.from(atob(encoded), char => char.charCodeAt(0))], 'received.png', { type: 'image/png' })
+    const input = document.querySelector('[data-testid="redeem-input"]')
+    const transfer = new DataTransfer(); transfer.items.add(file); input.files = transfer.files
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  }, bytes)
+}
+
 async function history(page) {
   if (!await page.$eval('details.saved', element => element.open)) await page.click('details.saved summary')
   await page.waitForSelector('details.saved[open] .group', { visible: true })
@@ -109,6 +126,7 @@ try {
   await page.reload({ waitUntil: 'networkidle0' })
   await made(page)
   const firstHash = await digest(page, '.make-grid .done-photo img')
+  const firstPng = await pngBytes(page)
   assert.equal(await page.evaluate(() => localStorage.getItem('zats.pending')), null)
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('zats.tokens')).length), 1)
   results.reloadDuringEmbeddingResumedSameAccount = true
@@ -124,6 +142,7 @@ try {
   await made(page)
   await closePhoto(page)
   const secondHash = await digest(page, '.make-grid .done-photo img')
+  const secondPng = await pngBytes(page)
   assert.notEqual(firstHash, secondHash)
   results.viewingHistoryPreservesCurrentDeposit = true
 
@@ -247,6 +266,62 @@ try {
   assert.equal(await failedSave.evaluate(() => window.__fake.state.published.length), 0)
   results.abortedArchiveKeepsReloadRecovery = true
   await isolated.close()
+
+  // A different browser receives the file: it has no creation record or archived copy.
+  const recipientContext = await browser.createBrowserContext()
+  const recipient = await newPage(recipientContext)
+  await recipient.goto(base + '#redeem', { waitUntil: 'networkidle0' })
+  await fund(recipient, first, 10000000)
+  await recipient.evaluate(() => {
+    WebSocket.prototype.send = function(raw) {
+      const message = JSON.parse(raw)
+      setTimeout(() => this._fire('message', new MessageEvent('message', { data: JSON.stringify({
+        jsonrpc: '2.0', id: message.id, error: { code: -32000, message: 'Offline recovery fixture' },
+      }) })), 5)
+    }
+  })
+  await uploadIncoming(recipient, firstPng)
+  await recipient.waitForSelector('[data-redeem="failed"]', { timeout: 30000 })
+  await history(recipient)
+  await openPhoto(recipient, first, firstHash)
+  assert.equal(await recipient.$('dialog[open] .done-badge'), null)
+  assert((await recipient.$eval('dialog[open] .pay-note', element => element.textContent)).includes('Saved from Redeem'))
+  await closePhoto(recipient)
+  const importedAt = await recipient.evaluate(() => JSON.parse(localStorage.getItem('zats.tokens'))[0].createdAt)
+  await recipient.reload({ waitUntil: 'networkidle0' })
+  await history(recipient)
+  await status(recipient, first, 'Unclaimed')
+  await openPhoto(recipient, first, firstHash)
+  await closePhoto(recipient)
+  await uploadIncoming(recipient, firstPng)
+  await recipient.waitForFunction(() => document.querySelector('[data-testid="claim-state"]')?.textContent === 'Unclaimed')
+  assert.deepEqual(await recipient.evaluate(() => JSON.parse(localStorage.getItem('zats.tokens')).map(record => ({ createdAt: record.createdAt, origin: record.origin, amount: record.amount }))),
+    [{ createdAt: importedAt, origin: 'opened', amount: 10000000 }])
+  await openPhoto(recipient, first, firstHash)
+  await closePhoto(recipient)
+  results.incomingPngSavedBeforeOfflineNodeRead = true
+  results.incomingHistorySurvivesReloadWithoutDuplicates = true
+
+  // A failed import transaction must warn while preserving the incoming account's key.
+  await fund(recipient, second, 20000000)
+  await recipient.evaluate(() => {
+    const add = IDBObjectStore.prototype.add
+    IDBObjectStore.prototype.add = function(value, key) {
+      const req = add.call(this, value, key)
+      if (typeof key === 'string' && key.startsWith('made:')) this.transaction.abort()
+      return req
+    }
+  })
+  await uploadIncoming(recipient, secondPng)
+  await recipient.waitForSelector('[data-testid="redeem-history-warning"]', { visible: true })
+  assert.equal(await recipient.evaluate(() => JSON.parse(localStorage.getItem('zats.tokens')).length), 2)
+  await (await recipient.$('[data-testid="redeem-input"]')).uploadFile(sample)
+  await recipient.waitForSelector('[data-redeem="erased"]')
+  assert.equal(await recipient.evaluate(() => JSON.parse(localStorage.getItem('zats.tokens')).length), 2)
+  assert.equal(await recipient.evaluate(() => window.__fake.state.published.length), 0)
+  results.failedIncomingArchiveWarnsAndKeepsKey = true
+  results.invalidImageDoesNotEnterHistory = true
+  await recipientContext.close()
 
   assert.deepEqual(logs, [])
   console.log(JSON.stringify({ historyRecovery: results, mainnetTransactions: 0 }, null, 2))

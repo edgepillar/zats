@@ -22,6 +22,8 @@ export interface SavedPhoto {
   height: number
   /** Amount when this exact PNG was made, not its current balance. */
   amount: number
+  /** Imported PNGs contain no creation amount; do not label their metadata as one. */
+  origin?: 'created' | 'opened'
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -85,6 +87,15 @@ export function clearPendingPhoto(quote: string): Promise<void> {
 /** Resolve only after the transaction commits; a request's success alone is not durable. */
 export function saveMadePhoto(address: string, photo: SavedPhoto): Promise<boolean> {
   return run('readwrite', (s) => s.put(photo, madeKey(address))).then(() => true, () => false)
+}
+
+/** Import without replacing an existing PNG, even when two tabs open the same account together. */
+export function saveMadePhotoIfAbsent(address: string, photo: SavedPhoto): Promise<boolean> {
+  return run('readwrite', (s) => {
+    const req = s.getKey(madeKey(address))
+    req.onsuccess = () => { if (req.result === undefined) s.add(photo, madeKey(address)) }
+    return req
+  }).then(() => true, () => false)
 }
 
 /** Check availability without loading every PNG into memory when History opens. */

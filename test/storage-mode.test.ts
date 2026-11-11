@@ -20,6 +20,29 @@ afterEach(() => {
 })
 
 describe('wallet storage on a shared hosting origin', () => {
+  it('deduplicates opened accounts and preserves their first timestamp and last positive balance', async () => {
+    vi.stubEnv('VITE_DEMO', '0')
+    const wallet = await import('../src/wallet')
+    expect(wallet.rememberOpenedToken(token.id, token.token)).toBe(true)
+    const first = wallet.loadTokens()[0]
+    expect(first.origin).toBe('opened')
+    wallet.recordOpenedAmount(token.id, token.amount)
+    expect(wallet.rememberOpenedToken(token.id, token.token)).toBe(true)
+    wallet.recordOpenedAmount(token.id, 0)
+    expect(wallet.loadTokens()).toEqual([{ ...first, amount: token.amount }])
+  })
+
+  it('does not replace an existing creation record when its photo is opened on Redeem', async () => {
+    vi.stubEnv('VITE_DEMO', '0')
+    records.set('zats.tokens', JSON.stringify([token]))
+    const wallet = await import('../src/wallet')
+    expect(wallet.rememberOpenedToken(token.id, token.token)).toBe(true)
+    wallet.recordOpenedAmount(token.id, 1)
+    expect(wallet.loadTokens()).toEqual([token])
+    expect(wallet.rememberOpenedToken(token.id, 'different-public-test-value')).toBe(false)
+    expect(wallet.loadTokens()).toEqual([token])
+  })
+
   it('notifies local History updates, follows other tabs, and unsubscribes cleanly', async () => {
     vi.stubEnv('VITE_DEMO', '0')
     const window = new EventTarget()

@@ -4,7 +4,9 @@ import { useDropImages, usePasteImages } from '../hooks'
 import { readStickerInWorker, warmUpReader } from '../workerClient'
 import type { StickerReadResult } from '../read'
 import { isTestPayload } from '../testPayload'
-import { OfflineError, checkClaimState, loadZenon, summarizeToken, type TokenSummary } from '../zenon'
+import { OfflineError, addressOf, checkClaimState, loadZenon, summarizeToken, type TokenSummary } from '../zenon'
+import { rememberRedeemPhoto } from '../redeemHistory'
+import { recordOpenedAmount } from '../wallet'
 import { DEMO } from '../demo'
 import { canReadClipboardImages, readClipboardImage } from '../actions'
 import { ClaimCard, type TokenCheck } from './ClaimCard'
@@ -45,6 +47,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
   const { t } = useI18n()
   const [stage, setStage] = useState<Stage>({ k: 'idle' })
   const [notice, setNotice] = useState<string | null>(null)
+  const [historyWarning, setHistoryWarning] = useState(false)
   // Once the browser refuses a paste it keeps refusing (KakaoTalk's in-app browser on Android does).
   const [pasteBlocked, setPasteBlocked] = useState(false)
   const run = useRef(0)
@@ -72,6 +75,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
     const file = files[0]
     if (!file) return
     setNotice(null)
+    setHistoryWarning(false)
     lastFile.current = file
     const id = ++run.current
     if (url.current) URL.revokeObjectURL(url.current)
@@ -92,6 +96,22 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
     const outcome = outcomeOf(result)
     if (outcome.k !== 'money') return setStage({ k: 'done', photo, outcome })
 
+    // Save validated incoming photos before a node read or claim, including when the node is offline.
+    let address: string
+    try {
+      address = await addressOf(outcome.token)
+    } catch (e) {
+      if (id !== run.current) return
+      setStage({ k: 'done', photo, outcome: e instanceof OfflineError
+        ? { k: 'failed' }
+        : { ...outcome, check: { claim: 'unknown', invalid: true } } })
+      return
+    }
+    if (id !== run.current) return
+    const stored = await rememberRedeemPhoto(address, outcome.token, file, result.width ?? 0, result.height ?? 0).catch(() => false)
+    if (id !== run.current) return
+    setHistoryWarning(!stored)
+
     // A real secret: get the amount from the chain before showing the card.
     let summary: TokenSummary
     try {
@@ -103,6 +123,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
       return
     }
     if (id !== run.current) return
+    try { recordOpenedAmount(address, summary.amount) } catch { setHistoryWarning(true) }
     setStage({ k: 'done', photo, outcome: { ...outcome, check: { summary, claim: 'checking' } } })
     // The ways to take the money wait for this answer, so a node that never replies can't hold them.
     let claim: TokenCheck['claim']
@@ -132,6 +153,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
   const reset = () => {
     run.current++
     setNotice(null)
+    setHistoryWarning(false)
     setStage({ k: 'idle' })
   }
 
@@ -206,6 +228,7 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
           {stage.k === 'done' && (
             <>
               <Outcome outcome={stage.outcome} onRetry={retry} />
+              {historyWarning && <p className="redeem-notice" role="status" data-testid="redeem-history-warning">{t('saved.importFailed')}</p>}
               <button type="button" className="btn btn--text redeem-again" onClick={reset}>
                 {t('redeem.again')}
               </button>

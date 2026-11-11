@@ -187,7 +187,7 @@ export function MakeFlow({ active, head, historyHost, historyActive }: {
       const pixels = photoToPixels(from, size)
       const made = await makeStickerInWorker(pixels, tok.token)
       const file = new File([made.png as BlobPart], `zats-${tok.amount}.png`, { type: 'image/png' })
-      const photoSaved = await saveMadePhoto(tok.id, { photo: file, width: made.width, height: made.height, amount: tok.amount })
+      const photoSaved = await saveMadePhoto(tok.id, { photo: file, width: made.width, height: made.height, amount: tok.amount, origin: 'created' })
       const url = URL.createObjectURL(file)
       madeUrls.current.push(url)
       // Decode before showing, so the reveal plays on the photo and not on an empty box.
@@ -577,7 +577,9 @@ function DonePhoto({ stage }: { stage: Extract<Stage, { k: 'done' }> }) {
   return (
     <div className="done-photo">
       <img src={stage.made.url} alt="" />
-      <span className="done-badge">{t(stage.fromHistory ? 'saved.photo.amount' : 'make.inside', { amount: num(stage.saved.amount) })}</span>
+      {!(stage.fromHistory && stage.saved.origin === 'opened') && (
+        <span className="done-badge">{t(stage.fromHistory ? 'saved.photo.amount' : 'make.inside', { amount: num(stage.saved.amount) })}</span>
+      )}
     </div>
   )
 }
@@ -732,7 +734,7 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
     <div className="done" data-testid="made-photo">
       <div className="done-card">
         <p className="done-title">{t(stage.fromHistory ? 'saved.photo.title' : 'make.done.title', { amount: num(saved.amount) })}</p>
-        {stage.fromHistory && <p className="pay-note">{t('saved.photo.info')}</p>}
+        {stage.fromHistory && <p className="pay-note">{t(saved.origin === 'opened' ? 'saved.photo.importedInfo' : 'saved.photo.info')}</p>}
         {!stage.photoSaved && <p className="invoice-warn" role="alert" data-testid="photo-save-warning">{t('make.photoUnsaved')}</p>}
         <p className="done-facts">
           <span>PNG</span>,{' '}
@@ -812,7 +814,7 @@ function SavedPhotoDialog({ value, onClose }: {
   const dialog = useRef<HTMLDialogElement>(null)
   const [made, setMade] = useState<Made | null>(null)
   useEffect(() => {
-    const file = new File([value.photo.photo], `zats-${value.photo.amount}.png`, { type: 'image/png' })
+    const file = new File([value.photo.photo], value.photo.origin === 'opened' ? 'zats-photo.png' : `zats-${value.photo.amount}.png`, { type: 'image/png' })
     const url = URL.createObjectURL(file)
     setMade({ file, url, width: value.photo.width, height: value.photo.height })
     const element = dialog.current
@@ -820,7 +822,7 @@ function SavedPhotoDialog({ value, onClose }: {
     return () => { element?.close(); URL.revokeObjectURL(url) }
   }, [value])
   const stage: Extract<Stage, { k: 'done' }> | null = made && {
-    k: 'done', saved: value.saved, made, unsaved: false, photoSaved: true, fromHistory: true,
+    k: 'done', saved: { ...value.saved, origin: value.photo.origin ?? 'created' }, made, unsaved: false, photoSaved: true, fromHistory: true,
   }
   return (
     <dialog ref={dialog} className="history-photo" aria-label={t('saved.photo.title')} onClose={onClose} data-testid="history-photo">
@@ -1001,6 +1003,7 @@ function SavedItem({
   }).format(date)
   const finished = status === 'spent'
   const recoverable = status === 'unspent' || status === 'unknown'
+  const amountUnknown = tok.origin === 'opened' && tok.amount === 0 && (status === 'checking' || status === 'unknown')
   // Deleting a secret that may still hold ZNN loses it, so that asks first; a claimed row just goes.
   const remove = () => (finished || armed ? onDelete() : setArmed(true))
 
@@ -1009,9 +1012,9 @@ function SavedItem({
       <div className="saved-row">
         <div className="saved-main">
           <strong>
-            {num(zats)} <span>{zatsUnit(zats)}</span>
+            {amountUnknown ? '—' : num(zats)} <span>{zatsUnit(zats)}</span>
           </strong>
-          <p className="saved-meta">{when}</p>
+          <p className="saved-meta">{t(tok.origin === 'opened' ? 'saved.opened' : 'saved.created')} · {when}</p>
         </div>
         <span className={`status status--${status === 'empty' ? 'pending' : status}`}>{t(`saved.${status}`)}</span>
         {finished && (
@@ -1059,7 +1062,7 @@ function SavedItem({
                   </button>
                 )}
                 <button type="button" className="btn btn--white btn--sm" onClick={() => setTakingBack(true)}>
-                  {t('saved.takeBack')}
+                  {t(tok.origin === 'opened' ? 'claim.button' : 'saved.takeBack')}
                 </button>
               </>
             )

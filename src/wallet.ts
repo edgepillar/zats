@@ -21,9 +21,11 @@ export interface SavedToken {
   /** The account's address. */
   id: string
   token: string
-  /** ZNN that arrived, in zats. */
+  /** Zats at creation, or the last positive balance observed for an opened account. */
   amount: number
   createdAt: number
+  /** Missing on older records, which were created on Hide. */
+  origin?: 'created' | 'opened'
   /**
    * Whether a photo has ever been made. The PNG's availability is checked separately in IndexedDB;
    * old versions did not keep completed PNGs, even when this flag was true.
@@ -65,6 +67,22 @@ export function loadTokens(): SavedToken[] {
 export function addToken(t: SavedToken): boolean {
   const list = loadTokens().filter((x) => x.id !== t.id)
   return saveTokens([t, ...list])
+}
+
+/** Remember a valid account opened on Redeem without replacing an existing creation record. */
+export function rememberOpenedToken(id: string, token: string): boolean {
+  const existing = loadTokens().find((x) => x.id === id)
+  if (existing) return existing.token === token
+  return addToken({ id, token, amount: 0, createdAt: Date.now(), photo: true, origin: 'opened' })
+}
+
+/** Keep the last positive observed amount for an imported account, including after a claim. */
+export function recordOpenedAmount(id: string, amount: number): void {
+  if (!Number.isSafeInteger(amount) || amount <= 0) return
+  const list = loadTokens()
+  const found = list.find((x) => x.id === id)
+  if (found?.origin !== 'opened' || found.amount === amount) return
+  saveTokens(list.map((x) => x.id === id ? { ...x, amount } : x))
 }
 
 /** Records that a saved secret is now hidden in a photo. */
