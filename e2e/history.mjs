@@ -14,6 +14,7 @@ const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function newPage(context = browser.defaultBrowserContext()) {
   const page = await context.newPage()
+  await page.bringToFront()
   page.on('pageerror', error => logs.push(error.message.slice(0, 200)))
   await page.evaluateOnNewDocument(fake + `
     // Keep only the simulated ledger across reloads; no production namespace is involved.
@@ -193,6 +194,7 @@ try {
   await page.waitForSelector(row(first) + ' [data-testid="saved-recreate-photo"]')
   assert.equal(await page.$eval(row(first) + ' [data-testid="saved-recreate-photo"]', element => element.textContent.trim()), 'Recreate photo')
   await page.click(row(first) + ' [data-testid="saved-recreate-photo"]')
+  await page.waitForSelector('[data-testid="make-photo-input"]')
   await (await page.$('[data-testid="make-photo-input"]')).uploadFile(sample)
   await made(page)
   await openPhoto(page, first, await digest(page, '.make-grid .done-photo img'))
