@@ -17,7 +17,8 @@
     "prebuild": "node scripts/copy-pow.mjs",
     "prepreview": "node scripts/copy-pow.mjs",
     "e2e": "node e2e/flow.mjs",
-    "build:demo": "VITE_DEMO=1 vite build --outDir dist-demo"
+    "build:demo": "VITE_DEMO=1 vite build --outDir dist-demo",
+    "e2e:demo": "node e2e/demo-flow.mjs"
   },
   "dependencies": {
     "@fontsource/dotgothic16": "5.3.1",
