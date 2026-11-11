@@ -15,6 +15,7 @@ const fake = vi.hoisted(() => {
       getUnreceivedBlocksByAddress: vi.fn(async () => ({ list: [] as unknown[], more: false })),
       getUnconfirmedBlocksByAddress: vi.fn(async () => ({ count: 0 })),
       getFrontierAccountBlock: vi.fn(async () => ({ hash: { toString: (): string => 'published-hash' } })),
+      getAccountBlocksByPage: vi.fn(async (_addr: unknown, _page: number, _size: number) => ({ list: [] as unknown[], count: 0, more: false })),
     },
     send: vi.fn(async (_template: unknown, _keyPair: unknown) => ({ hash: { toString: (): string => 'published-hash' } })),
   }
@@ -70,6 +71,7 @@ beforeEach(() => {
   fake.z.ledger.getUnreceivedBlocksByAddress.mockResolvedValue({ list: [], more: false })
   fake.z.ledger.getUnconfirmedBlocksByAddress.mockResolvedValue({ count: 0 })
   fake.z.ledger.getFrontierAccountBlock.mockResolvedValue({ hash: { toString: () => 'published-hash' } })
+  fake.z.ledger.getAccountBlocksByPage.mockResolvedValue({ list: [], count: 0, more: false })
   fake.z.send.mockResolvedValue({ hash: { toString: () => 'published-hash' } })
 })
 
@@ -79,6 +81,35 @@ afterEach(() => {
 })
 
 describe('the shared node connection', () => {
+  it('reads only a bounded page of confirmed matching mainnet token blocks for old receipts', async () => {
+    const { accountTransactions } = await import('../src/zenon')
+    const block = { address: { toString: () => 'photo' }, chainIdentifier: 1, blockType: 2,
+      tokenStandard: fake.znn.tokenStandard, confirmationDetail: { numConfirmations: 1 }, height: 1,
+      hash: { toString: () => 'a'.repeat(64) } }
+    const receive = { ...block, blockType: 3, height: 2, hash: { toString: () => 'b'.repeat(64) } }
+    fake.z.ledger.getAccountBlocksByPage.mockResolvedValue({ count: 7, more: true, list: [receive, block,
+      { ...block, address: { toString: () => 'another-account' } },
+      { ...block, chainIdentifier: 2 }, { ...block, confirmationDetail: { numConfirmations: 0 } },
+      { ...block, tokenStandard: { toString: () => 'other-token' } }, { ...block, blockType: 4 },
+    ] })
+    expect(await accountTransactions('photo')).toEqual(['a'.repeat(64), 'b'.repeat(64)])
+    expect(fake.z.ledger.getAccountBlocksByPage).toHaveBeenCalledTimes(1)
+    expect(fake.z.ledger.getAccountBlocksByPage).toHaveBeenCalledWith(expect.anything(), 0, 20)
+    expect(fake.z.send).not.toHaveBeenCalled()
+  })
+
+  it('bounds a silent transaction-history read and permits node rotation', async () => {
+    vi.useFakeTimers()
+    const { accountTransactions, OfflineError } = await import('../src/zenon')
+    fake.z.ledger.getAccountBlocksByPage.mockImplementation(() => new Promise(() => {}))
+    const result = accountTransactions('photo').catch((error: unknown) => error)
+    await vi.waitFor(() => expect(fake.z.ledger.getAccountBlocksByPage).toHaveBeenCalled())
+    await vi.advanceTimersByTimeAsync(8000)
+    expect(await result).toBeInstanceOf(OfflineError)
+    expect(fake.state.closed).toEqual([1])
+    expect(fake.z.send).not.toHaveBeenCalled()
+  })
+
   it('reuses one connection for repeated and concurrent reads despite the SDK status', async () => {
     const { accountState } = await import('../src/zenon')
     await Promise.all(Array.from({ length: 8 }, () => accountState('photo')))

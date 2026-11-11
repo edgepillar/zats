@@ -81,6 +81,10 @@
     'ledger.getUnconfirmedBlocksByAddress': () => ({ count: 0, list: [], more: false }),
     'ledger.getFrontierAccountBlock': ([a]) => state.accounts[a]?.frontier ?? null,
     'ledger.getAccountBlockByHash': ([h]) => state.blocks[h] ?? null,
+    'ledger.getAccountBlocksByPage': ([address, page, size]) => {
+      const all = Object.values(state.blocks).filter(block => block.address === address).sort((a, b) => b.height - a.height)
+      return { count: all.length, list: all.slice(page * size, (page + 1) * size), more: (page + 1) * size < all.length }
+    },
     'embedded.plasma.getRequiredPoWForAccountBlock': () => ({ availablePlasma: 0, basePlasma: 21000, requiredDifficulty: 315000 }),
     'ledger.publishRawTransaction': ([tx]) => (publish(tx), null),
   }

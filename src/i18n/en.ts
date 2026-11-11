@@ -164,6 +164,11 @@ export const en = {
   'make.retry': 'Try again',
 
   'saved.title': 'History',
+  'saved.transactions': 'Transactions',
+  'saved.tx': 'Tx {n}',
+  'saved.txLabel': 'View transaction {hash} on Zenon Hub',
+  'saved.accountHistory': 'Account history',
+  'saved.txSaveFailed': 'Transfer sent. Its transaction links could not be saved in History. Keep this page open and record the links.',
   'saved.unspent': 'Unclaimed',
   'saved.spent': 'Claimed',
   'saved.pending': 'Being claimed',

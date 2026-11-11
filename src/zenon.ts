@@ -8,6 +8,7 @@
  */
 
 import { DEMO } from './demo'
+import { transactionHashes } from './explorer'
 
 type Sdk = typeof import('znn-typescript-sdk')
 type ZenonClient = ReturnType<Sdk['Zenon']['getInstance']>
@@ -202,6 +203,8 @@ export interface AccountState {
   blockCount: number
   /** Blocks published by the account but not yet in a momentum: a claim is in progress. */
   unconfirmed: number
+  /** Kept incoming transfer hashes already returned by the balance read. */
+  incomingTransactions?: string[]
 }
 
 type Addr = ReturnType<Sdk['Address']['parse']>
@@ -250,7 +253,23 @@ export async function accountState(address: string): Promise<AccountState> {
     unreceived: incoming.length,
     blockCount: info?.blockCount ?? 0,
     unconfirmed: unconfirmed.count,
+    incomingTransactions: transactionHashes(incoming.map((block) => block.hash.toString())),
   }
+}
+
+/** Recent confirmed mainnet ZNN/QSR blocks for an old completed History row; read-only and bounded. */
+export async function accountTransactions(address: string): Promise<string[]> {
+  const { sdk: m, z, pending, nodeIndex } = await zenon()
+  const addr = m.Address.parse(address)
+  const blocks = await nodeRead(z.ledger.getAccountBlocksByPage(addr, 0, 20)).catch((e) => {
+    dropConnection(pending, z, nodeIndex)
+    throw new OfflineError(e)
+  })
+  return transactionHashes(blocks.list.filter((block) =>
+    block.address.toString() === addr.toString() && block.chainIdentifier === 1 &&
+    (block.blockType === 2 || block.blockType === 3) && KEPT.has(block.tokenStandard.toString()) &&
+    (block.confirmationDetail?.numConfirmations ?? 0) > 0,
+  ).sort((a, b) => a.height - b.height).map((block) => block.hash.toString()))
 }
 
 /* ---------- What Open shows ---------- */
@@ -307,6 +326,8 @@ export interface SweepResult {
   zats: number
   others: string[]
   hashes: string[]
+  /** UI storage annotation, independent of whether the transfer was sent. */
+  historySaved?: boolean
 }
 
 export class SweepError extends Error {

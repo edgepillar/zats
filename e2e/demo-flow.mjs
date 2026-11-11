@@ -90,8 +90,9 @@ r.mainnetRecordsUnchanged = await page.evaluate(() =>
   localStorage.getItem('zats.pending') === JSON.stringify({ address: 'public-mainnet-sentinel' }),
 )
 r.logs = logs
+r.noMainnetTransactionLinks = await page.$$eval('a[href^="https://zenonhub.io/explorer/"]', links => links.length === 0)
 console.log(JSON.stringify(r, null, 1))
 await browser.close()
-const ok = r.sent?.includes('Sent to') && r.mainnetRecordsUnchanged && /Claimed/.test(r.historyAfterReload?.[0] ?? '') && r.logs.length === 0
+const ok = r.sent?.includes('Sent to') && r.mainnetRecordsUnchanged && r.noMainnetTransactionLinks && /Claimed/.test(r.historyAfterReload?.[0] ?? '') && r.logs.length === 0
 console.log(ok ? 'PASS' : 'FAIL')
 process.exit(ok ? 0 : 1)

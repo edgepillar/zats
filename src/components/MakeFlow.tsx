@@ -8,6 +8,7 @@ import { capacityBytes } from '../stego'
 import { makeStickerInWorker } from '../workerClient'
 import {
   accountState,
+  accountTransactions,
   claimStateOf,
   newSecret,
   shortAddress as short,
@@ -30,6 +31,7 @@ import {
   loadTokens,
   markInPhoto,
   savePending,
+  recordTransactions,
   subscribeTokens,
   type PendingDeposit,
   type SavedToken,
@@ -42,6 +44,8 @@ import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
 import { DEMO, demoFund } from '../demo'
 import { MAX_AMOUNT, parseZats } from '../amount'
+import { transactionHashes } from '../explorer'
+import { TransactionLinks } from './TransactionLinks'
 
 /**
  * Make: photo → amount → a fresh Zenon address → the sender sends ZNN there → photo with zats inside.
@@ -229,6 +233,7 @@ export function MakeFlow({ active, head, historyHost, historyActive }: {
       amount: Number(state.zats),
       createdAt: pending.createdAt,
       photo: false,
+      transactions: state.incomingTransactions,
     }
     const ok = addToken(tok)
     // In the demo nothing real can be lost, so a page without storage doesn't warn about it.
@@ -956,6 +961,8 @@ function SavedItem({
   const [photoAvailable, setPhotoAvailable] = useState<boolean | null>(null)
   const [opening, setOpening] = useState(false)
   const [photoError, setPhotoError] = useState(false)
+  const nextTransactionRead = useRef(0)
+  const hasTransactions = transactionHashes(tok.transactions).length > 0
   const formId = useId()
 
   useEffect(() => {
@@ -979,7 +986,19 @@ function SavedItem({
         if (stopped) return
         // What's inside now; once it's claimed, what it held.
         setZats(s.zats > 0n ? Number(s.zats) : tok.amount)
-        setStatus(claimStateOf(s))
+        const next = claimStateOf(s)
+        setStatus(next)
+        if (!DEMO && s.incomingTransactions?.length) recordTransactions(tok.id, s.incomingTransactions)
+        if (!DEMO && (next === 'spent' || next === 'unspent') && s.blockCount > 0 &&
+          tok.transactionsHeight !== s.blockCount && Date.now() >= nextTransactionRead.current) {
+          nextTransactionRead.current = Date.now() + 30_000
+          try {
+            const hashes = await accountTransactions(tok.id)
+            if (!stopped && hashes.length) recordTransactions(tok.id, hashes, s.blockCount)
+          } catch {
+            // Keep the known account status and account-history link when this optional read fails.
+          }
+        }
       } catch {
         if (!stopped) setStatus('unknown')
       }
@@ -991,7 +1010,7 @@ function SavedItem({
       stopped = true
       clearTimeout(timer)
     }
-  }, [tok.id, tok.amount, back, round, live, busy])
+  }, [tok.id, tok.amount, tok.transactionsHeight, back, round, live, busy, hasTransactions])
 
   const date = new Date(tok.createdAt)
   const when = new Intl.DateTimeFormat(lang, {
@@ -1038,6 +1057,10 @@ function SavedItem({
       )}
       {photoError && <p className="saved-warn" role="status">{t('saved.photo.missing')}</p>}
       {back && <p className="saved-warn">{t('sweep.sentTo', { address: short(back.to) })}</p>}
+      {(finished || hasTransactions || back) && <TransactionLinks
+        hashes={[...transactionHashes(tok.transactions), ...(back?.hashes ?? [])]} address={tok.id}
+      />}
+      {!DEMO && back?.historySaved === false && <p className="saved-warn" role="status">{t('saved.txSaveFailed')}</p>}
       {(recoverable || status === 'empty') && !back && (
         <div className="saved-actions">
           {takingBack ? (

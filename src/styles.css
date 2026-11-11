@@ -1813,6 +1813,22 @@ p + p {
   box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
   overflow: auto;
 }
+.transaction-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.transaction-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .history-photo::backdrop {
   background: rgb(0 0 0 / 65%);
 }

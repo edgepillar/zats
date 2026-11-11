@@ -85,6 +85,20 @@ the previous read finishes, and refreshes on focus, visibility and network resto
 pauses its reads while its take-back operation is busy. Local wallet writes and storage events
 from other tabs update the list without a reload.
 
+Funding references are retained from the incoming transfers already returned by balance reads.
+Completed claims record their returned account-block hashes before the success view is shown,
+both from Redeem and History's take-back form. Known hashes survive reloads and later photo
+updates. History shows transaction links and an account-history link to Zenon Hub; no explorer
+request is made until a link is opened. Only valid, nonzero 64-character hex hashes become links,
+and up to fifty known hashes are retained per account. Demo hashes never link to mainnet.
+
+For funded or completed rows whose account height has changed, History can inspect one page of twenty recent
+account blocks. It keeps only confirmed mainnet ZNN/QSR sends and receives for that account.
+Failed lookups preserve the account status and account-history fallback and are retried with
+a thirty-second backoff while open. This bounded view is not a complete chain archive, and a
+link is not a claim of final recipient settlement. Receipt storage errors do not turn an
+already sent transfer into a failed claim; its live result still exposes the returned links.
+
 Opening a valid Zats account on Redeem also saves its key and exact incoming PNG before reading
 the node. Test payloads and invalid images are excluded. The account address deduplicates rows;
 reopening it keeps its first timestamp and does not replace an existing PNG. Imports use an

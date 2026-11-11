@@ -8,6 +8,8 @@ import { CheckIcon } from './Icons'
 import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
 import { DEMO } from '../demo'
+import { accountExplorerUrl } from '../explorer'
+import { TransactionLinks } from './TransactionLinks'
 
 /**
  * What Open shows when a photo holds zats, shaped like a money message in a chat: the amount on
@@ -20,7 +22,7 @@ export interface TokenCheck {
   claim: 'checking' | ClaimState | 'unknown'
 }
 
-export const explorerUrl = (address: string) => `https://zenonhub.io/explorer/account/${address}`
+export const explorerUrl = accountExplorerUrl
 
 export function ClaimCard({ token, check }: { token: string; check: TokenCheck }) {
   const { t } = useI18n()
@@ -57,6 +59,8 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
               <CheckIcon size={18} />
               <span>{t('sweep.sentTo', { address: short(sent.to) })}</span>
             </p>
+            <TransactionLinks hashes={sent.hashes} />
+            {!DEMO && sent.historySaved === false && <p className="saved-warn" role="status">{t('saved.txSaveFailed')}</p>}
             {!DEMO && (
               <a className="money-row money-cta money-cta--small" href={explorerUrl(sent.to)} target="_blank" rel="noopener noreferrer">
                 {t('claim.explorer')}

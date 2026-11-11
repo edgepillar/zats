@@ -4,6 +4,7 @@ import { prefersReducedMotion } from '../hooks'
 import { SweepError, parseAddress, sweep, type SweepResult, type SweepStep } from '../zenon'
 import { Loading } from './Buddies'
 import { DEMO, demoAddress } from '../demo'
+import { recordClaimTransactions } from '../wallet'
 
 /**
  * A z1… address field that moves everything in a photo's account there. Used to claim a photo on
@@ -59,7 +60,10 @@ export function SweepForm({
       .then(() => navigator.wakeLock?.request('screen'))
       .catch(() => null)
     try {
-      onDone(await sweep(token, to, setStep))
+      const result = await sweep(token, to, setStep)
+      let historySaved = false
+      try { historySaved = recordClaimTransactions(token, result.hashes) } catch { /* Transfer already sent. */ }
+      onDone({ ...result, historySaved })
     } catch (err) {
       const code = err instanceof SweepError ? err.code : 'failed'
       setError(t(`sweep.err.${code}`))

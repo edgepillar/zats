@@ -20,6 +20,33 @@ afterEach(() => {
 })
 
 describe('wallet storage on a shared hosting origin', () => {
+  it('keeps claim links through reload, repeated imports and photo completion updates', async () => {
+    vi.stubEnv('VITE_DEMO', '0')
+    const wallet = await import('../src/wallet')
+    wallet.addToken(token)
+    const hashes = ['a'.repeat(64), 'b'.repeat(64)]
+    expect(wallet.recordClaimTransactions(token.token, hashes)).toBe(true)
+    wallet.rememberOpenedToken(token.id, token.token)
+    wallet.addToken({ ...token, photo: true })
+    expect(wallet.recordTransactions(token.id, [hashes[1]])).toBe(true)
+    vi.resetModules()
+    const reloaded = await import('../src/wallet')
+    expect(reloaded.loadTokens()).toEqual([{ ...token, photo: true, transactions: hashes }])
+    expect(reloaded.recordTransactions('missing-public-fixture', hashes)).toBe(false)
+  })
+
+  it('reports receipt storage failure without deleting the recovery key or throwing', async () => {
+    vi.stubEnv('VITE_DEMO', '0')
+    records.set('zats.tokens', JSON.stringify([token]))
+    const wallet = await import('../src/wallet')
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: () => { throw new Error('public quota fixture') },
+    })
+    expect(wallet.recordClaimTransactions(token.token, ['a'.repeat(64)])).toBe(false)
+    expect(wallet.loadTokens()).toEqual([token])
+  })
+
   it('deduplicates opened accounts and preserves their first timestamp and last positive balance', async () => {
     vi.stubEnv('VITE_DEMO', '0')
     const wallet = await import('../src/wallet')

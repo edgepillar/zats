@@ -172,10 +172,27 @@ try {
 
   // Simulate a claim made elsewhere, leaving History open on Redeem throughout.
   await page.evaluate(address => {
+    // Model a row created before transaction references were stored.
+    const records = JSON.parse(localStorage.getItem('zats.tokens'))
+    const old = records.find(record => record.id === address)
+    delete old.transactions; delete old.transactionsHeight
+    localStorage.setItem('zats.tokens', JSON.stringify(records))
+    window.dispatchEvent(new StorageEvent('storage', { key: 'zats.tokens' }))
+    const source = Object.values(window.__fake.state.blocks).find(block => block.toAddress === address)
+    const received = { ...source, address, toAddress: 'z1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsggv2f', blockType: 3, height: 1, hash: 'c'.repeat(64), fromBlockHash: source.hash }
+    const sent = { ...source, address, toAddress: window.__fake.SENDER, blockType: 2, height: 2, hash: 'd'.repeat(64), previousHash: received.hash }
+    window.__fake.state.blocks[received.hash] = received
+    window.__fake.state.blocks[sent.hash] = sent
     window.__fake.state.unreceived[address] = []
-    window.__fake.state.accounts[address] = { height: 2, balances: {}, frontier: null }
+    window.__fake.state.accounts[address] = { height: 2, balances: {}, frontier: sent }
   }, first)
   await status(page, first, 'Claimed')
+  await page.waitForSelector(row(first) + ' [data-testid="history-tx"]', { visible: true })
+  const recoveredLinks = await page.$$eval(row(first) + ' [data-testid="history-tx"]', links => links.map(link => link.href))
+  for (const hash of ['c'.repeat(64), 'd'.repeat(64)]) {
+    assert(recoveredLinks.includes('https://zenonhub.io/explorer/transaction/' + hash))
+  }
+  results.oldCompletedRecordGetsReadOnlyTransactionLinks = true
   await page.setOfflineMode(true)
   await openPhoto(page, first, firstHash)
   await closePhoto(page)

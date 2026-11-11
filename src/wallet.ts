@@ -1,5 +1,6 @@
 import { loadJson, removeKey, saveJson } from './storage'
 import { DEMO } from './config'
+import { transactionHashes } from './explorer'
 
 /**
  * What must survive a reload: the deposit address being paid, and every secret made. A secret is
@@ -26,6 +27,10 @@ export interface SavedToken {
   createdAt: number
   /** Missing on older records, which were created on Hide. */
   origin?: 'created' | 'opened'
+  /** Known account-block hashes, retained locally across reloads. */
+  transactions?: string[]
+  /** Account height at the last successful bounded history lookup. */
+  transactionsHeight?: number
   /**
    * Whether a photo has ever been made. The PNG's availability is checked separately in IndexedDB;
    * old versions did not keep completed PNGs, even when this flag was true.
@@ -65,8 +70,31 @@ export function loadTokens(): SavedToken[] {
 
 /** Returns false if the secret could not be stored: the caller must show it to the user right away. */
 export function addToken(t: SavedToken): boolean {
-  const list = loadTokens().filter((x) => x.id !== t.id)
-  return saveTokens([t, ...list])
+  const all = loadTokens()
+  const previous = all.find((x) => x.id === t.id && x.token === t.token)
+  const hashes = transactionHashes([...transactionHashes(previous?.transactions), ...transactionHashes(t.transactions)])
+  const height = t.transactionsHeight ?? previous?.transactionsHeight
+  const next = hashes.length ? { ...t, transactions: hashes, ...(height !== undefined ? { transactionsHeight: height } : {}) } : t
+  return saveTokens([next, ...all.filter((x) => x.id !== t.id)])
+}
+
+export function recordTransactions(id: string, hashes: string[], blockCount?: number): boolean {
+  const list = loadTokens()
+  const found = list.find((x) => x.id === id)
+  if (!found) return false
+  const merged = transactionHashes([...transactionHashes(found.transactions), ...hashes])
+  if (!merged.length) return false
+  const height = typeof blockCount === 'number' && Number.isSafeInteger(blockCount) && blockCount >= 0 ? blockCount : undefined
+  if (JSON.stringify(found.transactions) === JSON.stringify(merged) && (height === undefined || found.transactionsHeight === height)) return true
+  return saveTokens(list.map((x) => x.id === id ? { ...x, transactions: merged,
+    ...(height !== undefined ? { transactionsHeight: height } : {}),
+  } : x))
+}
+
+/** A storage failure must not turn an already sent transfer into a failed claim. */
+export function recordClaimTransactions(token: string, hashes: string[]): boolean {
+  const found = loadTokens().find((x) => x.token === token)
+  return found ? recordTransactions(found.id, hashes) : false
 }
 
 /** Remember a valid account opened on Redeem without replacing an existing creation record. */
