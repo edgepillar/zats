@@ -20,6 +20,26 @@ afterEach(() => {
 })
 
 describe('wallet storage on a shared hosting origin', () => {
+  it('notifies local History updates, follows other tabs, and unsubscribes cleanly', async () => {
+    vi.stubEnv('VITE_DEMO', '0')
+    const window = new EventTarget()
+    vi.stubGlobal('window', window)
+    const wallet = await import('../src/wallet')
+    const changed = vi.fn()
+    const unsubscribe = wallet.subscribeTokens(changed)
+    expect(wallet.addToken(token)).toBe(true)
+    expect(changed).toHaveBeenCalledTimes(1)
+    const otherMode = Object.assign(new Event('storage'), { key: 'zats.demo.tokens' })
+    window.dispatchEvent(otherMode)
+    expect(changed).toHaveBeenCalledTimes(1)
+    window.dispatchEvent(Object.assign(new Event('storage'), { key: 'zats.tokens' }))
+    expect(changed).toHaveBeenCalledTimes(2)
+    unsubscribe()
+    wallet.markInPhoto(token.id)
+    window.dispatchEvent(Object.assign(new Event('storage'), { key: 'zats.tokens' }))
+    expect(changed).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps existing mainnet records readable', async () => {
     vi.stubEnv('VITE_DEMO', '0')
     records.set('zats.tokens', JSON.stringify([token]))

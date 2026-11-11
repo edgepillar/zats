@@ -25,14 +25,32 @@ export interface SavedToken {
   amount: number
   createdAt: number
   /**
-   * False from deposit until the secret is in a photo; true after. History offers "Put in a photo"
-   * only while it's false.
+   * Whether a photo has ever been made. The PNG's availability is checked separately in IndexedDB;
+   * old versions did not keep completed PNGs, even when this flag was true.
    */
   photo?: boolean
 }
 
 const PENDING = DEMO ? 'zats.demo.pending' : 'zats.pending'
 const TOKENS = DEMO ? 'zats.demo.tokens' : 'zats.tokens'
+const CHANGED = DEMO ? 'zats.demo.tokens-changed' : 'zats.tokens-changed'
+
+function saveTokens(list: SavedToken[]): boolean {
+  const ok = saveJson(TOKENS, list)
+  if (ok && typeof window !== 'undefined') window.dispatchEvent(new Event(CHANGED))
+  return ok
+}
+
+/** Same-page writes and other tabs update the list without reloading the application. */
+export function subscribeTokens(listener: () => void): () => void {
+  const changed = (e: StorageEvent) => { if (e.key === TOKENS || e.key === null) listener() }
+  window.addEventListener(CHANGED, listener)
+  window.addEventListener('storage', changed)
+  return () => {
+    window.removeEventListener(CHANGED, listener)
+    window.removeEventListener('storage', changed)
+  }
+}
 
 export const loadPending = (): PendingDeposit | null => loadJson<PendingDeposit | null>(PENDING, null)
 export const savePending = (p: PendingDeposit): boolean => saveJson(PENDING, p)
@@ -46,20 +64,14 @@ export function loadTokens(): SavedToken[] {
 /** Returns false if the secret could not be stored: the caller must show it to the user right away. */
 export function addToken(t: SavedToken): boolean {
   const list = loadTokens().filter((x) => x.id !== t.id)
-  return saveJson(TOKENS, [t, ...list])
+  return saveTokens([t, ...list])
 }
 
 /** Records that a saved secret is now hidden in a photo. */
 export function markInPhoto(id: string): boolean {
-  return saveJson(
-    TOKENS,
-    loadTokens().map((x) => (x.id === id ? { ...x, photo: true } : x)),
-  )
+  return saveTokens(loadTokens().map((x) => (x.id === id ? { ...x, photo: true } : x)))
 }
 
 export function deleteToken(id: string): boolean {
-  return saveJson(
-    TOKENS,
-    loadTokens().filter((x) => x.id !== id),
-  )
+  return saveTokens(loadTokens().filter((x) => x.id !== id))
 }

@@ -17,7 +17,10 @@ import {
   type SweepResult,
 } from '../zenon'
 import { redeemUrl } from '../nav'
-import { clearPendingPhoto, loadPendingPhoto, savePendingPhoto } from '../photoStore'
+import {
+  clearPendingPhoto, deleteMadePhoto, hasMadePhoto, loadMadePhoto, loadPendingPhoto,
+  saveMadePhoto, savePendingPhoto, type SavedPhoto,
+} from '../photoStore'
 import {
   addToken,
   clearPending,
@@ -26,6 +29,7 @@ import {
   loadTokens,
   markInPhoto,
   savePending,
+  subscribeTokens,
   type PendingDeposit,
   type SavedToken,
 } from '../wallet'
@@ -60,7 +64,7 @@ type Stage =
       why: 'lost' | 'put'
     }
   | { k: 'embedding'; saved: SavedToken }
-  | { k: 'done'; saved: SavedToken; made: Made; unsaved: boolean }
+  | { k: 'done'; saved: SavedToken; made: Made; unsaved: boolean; photoSaved: boolean; fromHistory?: boolean }
   /** `token`: a secret that isn't stored anywhere yet, shown so it can't be lost by tapping Cancel. */
   | { k: 'error'; message: string; detail?: string; note?: string; token?: string; retry?: () => void }
 
@@ -91,6 +95,8 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
   })
   const [offline, setOffline] = useState(false)
   const [saved, setSaved] = useState<SavedToken[]>(loadTokens)
+  const [photoStorageFailed, setPhotoStorageFailed] = useState(false)
+  const [historyPhoto, setHistoryPhoto] = useState<{ saved: SavedToken; photo: SavedPhoto } | null>(null)
   const photoRef = useRef(photo)
   photoRef.current = photo
   /** The file behind `photo`, kept so it can be stored while the deposit arrives. */
@@ -105,6 +111,29 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
     },
     [],
   )
+
+  useEffect(() => subscribeTokens(() => setSaved(loadTokens())), [])
+
+  const pendingAddress = stage.k === 'deposit' ? stage.pending.address : null
+  useEffect(() => {
+    if (!pendingAddress || photoRef.current) return
+    let stopped = false
+    void loadPendingPhoto(pendingAddress).then(async (kept) => {
+      if (stopped) return
+      if (!kept) { setPhotoStorageFailed(true); return }
+      try {
+        const restored = await loadPhoto(kept)
+        if (stopped || photoRef.current) { restored.release(); return }
+        photoRef.current = restored
+        photoFile.current = kept
+        setPhoto(restored)
+        setPhotoStorageFailed(false)
+      } catch {
+        if (!stopped) setPhotoStorageFailed(true)
+      }
+    })
+    return () => { stopped = true }
+  }, [pendingAddress])
 
   const parsedAmount = parseZats(amountText)
   const amount = parsedAmount.value
@@ -136,10 +165,14 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       return
     }
     photoRef.current?.release()
+    photoRef.current = next
     setPhoto(next)
     photoFile.current = file
     setPhotoError(null)
-    if (stage.k === 'needPhoto') void embed(stage.saved, next, stage.edge, stage.unsaved)
+    if (stage.k === 'needPhoto') {
+      await savePendingPhoto(stage.saved.id, file)
+      void embed(stage.saved, next, stage.edge, stage.unsaved)
+    }
   }
 
   const embed = async (tok: SavedToken, from: LoadedPhoto, size: number, unsaved: boolean) => {
@@ -148,18 +181,26 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       const pixels = photoToPixels(from, size)
       const made = await makeStickerInWorker(pixels, tok.token)
       const file = new File([made.png as BlobPart], `zats-${tok.amount}.png`, { type: 'image/png' })
+      const photoSaved = await saveMadePhoto(tok.id, { photo: file, width: made.width, height: made.height, amount: tok.amount })
       const url = URL.createObjectURL(file)
       madeUrls.current.push(url)
       // Decode before showing, so the reveal plays on the photo and not on an empty box.
       const preview = new Image()
       preview.src = url
       await preview.decode().catch(() => {})
-      if (!unsaved && markInPhoto(tok.id)) setSaved(loadTokens())
+      if (photoSaved) {
+        const marked = !unsaved && markInPhoto(tok.id)
+        setSaved((list) => marked ? loadTokens() : list.map((x) => x.id === tok.id ? { ...x } : x))
+        // Keep the deposit and source until the finished PNG's transaction has committed.
+        if (loadPending()?.address === tok.id) clearPending()
+        await clearPendingPhoto(tok.id)
+      }
       setStage({
         k: 'done',
         saved: tok,
         made: { file, url, width: made.width, height: made.height },
         unsaved,
+        photoSaved,
       })
       card.current?.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
     } catch (e) {
@@ -186,7 +227,6 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
     const ok = addToken(tok)
     // In the demo nothing real can be lost, so a page without storage doesn't warn about it.
     const stored = ok || DEMO
-    clearPending()
     setSaved(ok ? loadTokens() : (list) => [tok, ...list.filter((x) => x.id !== tok.id)])
     // The page may have reloaded while waiting (common on phones): get the photo back.
     let current = photoRef.current
@@ -194,7 +234,10 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       const kept = await loadPendingPhoto(pending.address)
       if (kept) {
         try {
-          current = await loadPhoto(kept)
+          const restored = await loadPhoto(kept)
+          // The deposit preview may have restored the same image while this read was in flight.
+          if (photoRef.current) { restored.release(); current = photoRef.current }
+          else { current = restored; photoRef.current = restored }
           photoFile.current = kept
           setPhoto(current)
         } catch {
@@ -202,7 +245,6 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
         }
       }
     }
-    void clearPendingPhoto()
     if (!current) setStage({ k: 'needPhoto', saved: tok, unsaved: unsaved || !stored, edge: pending.edge, why: 'lost' })
     else await embed(tok, current, pending.edge, unsaved || !stored)
   }
@@ -242,13 +284,14 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
     try {
       const { token, address } = await newSecret()
       const createdAt = Date.now()
-      // Saved to History first: whatever is sent to this address can always be found again.
+      // Save recovery material before showing the deposit address, if storage is available.
       const ok = addToken({ id: address, token, amount: 0, createdAt, photo: false })
       if (ok) setSaved(loadTokens())
       const stored = ok || DEMO
       const pending: PendingDeposit = { token, address, amount, createdAt, edge }
       savePending(pending)
-      if (photoFile.current) await savePendingPhoto(address, photoFile.current)
+      const photoSaved = photoFile.current ? await savePendingPhoto(address, photoFile.current) : false
+      setPhotoStorageFailed(!photoSaved)
       setStage({ k: 'deposit', pending, unsaved: !stored })
     } catch (e) {
       setStage({ k: 'error', ...failure(e), retry: () => setStage({ k: 'form' }) })
@@ -264,14 +307,39 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       // can't tell: the secret stays in History either way
     }
     clearPending()
-    void clearPendingPhoto()
+    // Retain the source with this History entry: a transfer can arrive after cancellation.
     setStage({ k: 'form' })
   }
 
   const reset = () => {
     photoRef.current?.release()
+    photoRef.current = null
+    photoFile.current = null
     setPhoto(null)
     setStage({ k: 'form' })
+  }
+
+  const putSavedPhoto = async (tok: SavedToken, amount: number) => {
+    if (stage.k === 'deposit' || stage.k === 'creating' || stage.k === 'embedding') return
+    const funded = { ...tok, amount }
+    const unsaved = !DEMO && !loadTokens().some((x) => x.id === tok.id && x.token === tok.token)
+    setStage({ k: 'embedding', saved: funded })
+    const kept = await loadPendingPhoto(tok.id)
+    if (kept) {
+      try {
+        const restored = await loadPhoto(kept)
+        photoRef.current?.release()
+        photoRef.current = restored
+        photoFile.current = kept
+        setPhoto(restored)
+        await embed(funded, restored, edge, unsaved)
+        return
+      } catch {
+        // The source is unavailable; the secret can still be embedded in a new photo.
+      }
+    }
+    setStage({ k: 'needPhoto', saved: funded, unsaved, edge, why: 'put' })
+    card.current?.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
   }
 
   usePasteImages((files) => void choosePhoto(files), active && (stage.k === 'form' || stage.k === 'needPhoto'))
@@ -391,6 +459,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
           pending={stage.pending}
           offline={offline}
           unsaved={!!stage.unsaved}
+          photoStorageFailed={photoStorageFailed}
           onCancel={() => void cancel(stage.pending, !!stage.unsaved)}
         />
       )
@@ -452,19 +521,28 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
   return (
     <>
       {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
+      {historyPhoto && <SavedPhotoDialog value={historyPhoto} onClose={() => setHistoryPhoto(null)} />}
       <div className={`make-grid${photoSlot ? '' : ' make-grid--solo'}`} ref={card}>
         {head}
         {photoSlot && <div className={`make-photo${photoAside ? ' make-photo--aside' : ''}`}>{photoSlot}</div>}
         <div className="make-panel">{panel}</div>
         <SavedList
+          active={active}
           tokens={saved}
-          onPut={(tok, amount) => {
-            setStage({ k: 'needPhoto', saved: { ...tok, amount }, unsaved: false, edge, why: 'put' })
-            card.current?.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
+          canPut={stage.k !== 'deposit' && stage.k !== 'creating' && stage.k !== 'embedding'}
+          onPut={(tok, amount) => void putSavedPhoto(tok, amount)}
+          onView={async (tok) => {
+            const photo = await loadMadePhoto(tok.id)
+            if (!photo) return false
+            setHistoryPhoto({ saved: { ...tok, amount: photo.amount }, photo })
+            return true
           }}
           onDelete={(id) => {
-            deleteToken(id)
-            setSaved(loadTokens())
+            if (deleteToken(id)) {
+              setSaved(loadTokens())
+              void deleteMadePhoto(id)
+              void clearPendingPhoto(id)
+            }
           }}
         />
       </div>
@@ -488,7 +566,7 @@ function DonePhoto({ stage }: { stage: Extract<Stage, { k: 'done' }> }) {
   return (
     <div className="done-photo">
       <img src={stage.made.url} alt="" />
-      <span className="done-badge">{t('make.inside', { amount: num(stage.saved.amount) })}</span>
+      <span className="done-badge">{t(stage.fromHistory ? 'saved.photo.amount' : 'make.inside', { amount: num(stage.saved.amount) })}</span>
     </div>
   )
 }
@@ -547,11 +625,13 @@ function DepositView({
   pending,
   offline,
   unsaved,
+  photoStorageFailed,
   onCancel,
 }: {
   pending: PendingDeposit
   offline: boolean
   unsaved: boolean
+  photoStorageFailed: boolean
   onCancel: () => void
 }) {
   const { t, num } = useI18n()
@@ -579,6 +659,7 @@ function DepositView({
         </p>
       )}
       {unsaved && <RawWords token={pending.token} />}
+      {photoStorageFailed && <p className="invoice-warn" role="alert">{t('deposit.photoUnsaved')}</p>}
       <div className="qr" aria-label={pending.address}>
         {qr && <img src={qr} alt="" />}
       </div>
@@ -639,7 +720,9 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
   return (
     <div className="done" data-testid="made-photo">
       <div className="done-card">
-        <p className="done-title">{t('make.done.title', { amount: num(saved.amount) })}</p>
+        <p className="done-title">{t(stage.fromHistory ? 'saved.photo.title' : 'make.done.title', { amount: num(saved.amount) })}</p>
+        {stage.fromHistory && <p className="pay-note">{t('saved.photo.info')}</p>}
+        {!stage.photoSaved && <p className="invoice-warn" role="alert" data-testid="photo-save-warning">{t('make.photoUnsaved')}</p>}
         <p className="done-facts">
           <span>PNG</span>,{' '}
           <span>
@@ -654,6 +737,7 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
               className="btn btn--primary btn--xl btn--block"
               data-testid="demo-open"
               onClick={() => {
+                if (stage.fromHistory) onAgain()
                 location.hash = '#redeem'
                 // After the page switch, so Redeem is showing when the photo opens.
                 setTimeout(() => window.dispatchEvent(new CustomEvent('zats:open', { detail: made.file })), 50)
@@ -702,9 +786,35 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
         {unsaved && <RawWords token={saved.token} />}
       </div>
       <button type="button" className="btn btn--text done-again" onClick={onAgain}>
-        {t('make.done.again')}
+        {t(stage.fromHistory ? 'saved.photo.close' : 'make.done.again')}
       </button>
     </div>
+  )
+}
+
+/** Viewing an archived PNG must not replace or stop a deposit in progress. */
+function SavedPhotoDialog({ value, onClose }: {
+  value: { saved: SavedToken; photo: SavedPhoto }
+  onClose: () => void
+}) {
+  const { t } = useI18n()
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [made, setMade] = useState<Made | null>(null)
+  useEffect(() => {
+    const file = new File([value.photo.photo], `zats-${value.photo.amount}.png`, { type: 'image/png' })
+    const url = URL.createObjectURL(file)
+    setMade({ file, url, width: value.photo.width, height: value.photo.height })
+    const element = dialog.current
+    element?.showModal()
+    return () => { element?.close(); URL.revokeObjectURL(url) }
+  }, [value])
+  const stage: Extract<Stage, { k: 'done' }> | null = made && {
+    k: 'done', saved: value.saved, made, unsaved: false, photoSaved: true, fromHistory: true,
+  }
+  return (
+    <dialog ref={dialog} className="history-photo" aria-label={t('saved.photo.title')} onClose={onClose} data-testid="history-photo">
+      {stage && <><DonePhoto stage={stage} /><Done stage={stage} onAgain={onClose} /></>}
+    </dialog>
   )
 }
 
@@ -738,20 +848,42 @@ function RawWords({ token }: { token: string }) {
 }
 
 function SavedList({
+  active,
   tokens,
+  canPut,
   onPut,
+  onView,
   onDelete,
 }: {
+  active: boolean
   tokens: SavedToken[]
+  canPut: boolean
   onPut: (t: SavedToken, amount: number) => void
+  onView: (t: SavedToken) => Promise<boolean>
   onDelete: (id: string) => void
 }) {
   const { t } = useI18n()
-  // Asks the chain again each time the list is opened: a friend may have claimed a photo meanwhile.
+  const [open, setOpen] = useState(false)
+  const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden')
   const [round, setRound] = useState(0)
+  useEffect(() => {
+    const refresh = () => {
+      const shown = document.visibilityState !== 'hidden'
+      setVisible(shown)
+      if (shown) setRound((n) => n + 1)
+    }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('online', refresh)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('online', refresh)
+    }
+  }, [])
   if (!tokens.length) return null
   return (
-    <details className="saved" onToggle={(e) => e.currentTarget.open && setRound((n) => n + 1)}>
+    <details className="saved" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="saved-summary">
         <span className="saved-title">{t('saved.title')}</span>
         <span className="saved-count">{tokens.length}</span>
@@ -763,7 +895,10 @@ function SavedList({
             key={tok.id}
             tok={tok}
             round={round}
+            live={active && open && visible}
+            canPut={canPut}
             onPut={(amount) => onPut(tok, amount)}
+            onView={() => onView(tok)}
             onDelete={() => onDelete(tok.id)}
           />
         ))}
@@ -783,12 +918,18 @@ type SavedStatus = 'checking' | 'unspent' | 'pending' | 'spent' | 'empty' | 'unk
 function SavedItem({
   tok,
   round,
+  live,
+  canPut,
   onPut,
+  onView,
   onDelete,
 }: {
   tok: SavedToken
   round: number
+  live: boolean
+  canPut: boolean
   onPut: (amount: number) => void
+  onView: () => Promise<boolean>
   onDelete: () => void
 }) {
   const { t, num, lang } = useI18n()
@@ -798,22 +939,45 @@ function SavedItem({
   const [takingBack, setTakingBack] = useState(false)
   const [busy, setBusy] = useState(false)
   const [back, setBack] = useState<SweepResult | null>(null)
+  const [photoAvailable, setPhotoAvailable] = useState<boolean | null>(null)
+  const [opening, setOpening] = useState(false)
+  const [photoError, setPhotoError] = useState(false)
   const formId = useId()
 
   useEffect(() => {
-    let live = true
-    accountState(tok.id)
-      .then((s) => {
-        if (!live) return
+    let stopped = false
+    void hasMadePhoto(tok.id).then((available) => {
+      if (!stopped) {
+        setPhotoAvailable(available)
+        if (available) setPhotoError(false)
+      }
+    })
+    return () => { stopped = true }
+  }, [tok, round])
+
+  useEffect(() => {
+    if (!live || busy) return
+    let stopped = false
+    let timer: ReturnType<typeof setTimeout>
+    const check = async () => {
+      try {
+        const s = await accountState(tok.id)
+        if (stopped) return
         // What's inside now; once it's claimed, what it held.
         setZats(s.zats > 0n ? Number(s.zats) : tok.amount)
         setStatus(claimStateOf(s))
-      })
-      .catch(() => live && setStatus('unknown'))
-    return () => {
-      live = false
+      } catch {
+        if (!stopped) setStatus('unknown')
+      }
+      // Schedule after completion, so a slow read never overlaps the next poll for this row.
+      if (!stopped) timer = setTimeout(check, 5000)
     }
-  }, [tok.id, back, round])
+    void check()
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+    }
+  }, [tok.id, tok.amount, back, round, live, busy])
 
   const date = new Date(tok.createdAt)
   const when = new Intl.DateTimeFormat(lang, {
@@ -829,7 +993,7 @@ function SavedItem({
   const remove = () => (finished || armed ? onDelete() : setArmed(true))
 
   return (
-    <li className={`saved-item saved-item--${status === 'empty' ? 'pending' : status}`}>
+    <li className={`saved-item saved-item--${status === 'empty' ? 'pending' : status}`} data-address={tok.id}>
       <div className="saved-row">
         <div className="saved-main">
           <strong>
@@ -844,6 +1008,20 @@ function SavedItem({
           </button>
         )}
       </div>
+      {photoAvailable && (
+        <div className="saved-actions">
+          <button type="button" className="btn btn--white btn--sm" data-testid="saved-view-photo" disabled={opening} onClick={async () => {
+            setOpening(true)
+            const ok = await onView()
+            setOpening(false)
+            if (!ok) { setPhotoAvailable(false); setPhotoError(true) }
+          }}>
+            <PhotoIcon size={16} />
+            {t('saved.view')}
+          </button>
+        </div>
+      )}
+      {photoError && <p className="saved-warn" role="status">{t('saved.photo.missing')}</p>}
       {back && <p className="saved-warn">{t('sweep.sentTo', { address: short(back.to) })}</p>}
       {(recoverable || status === 'empty') && !back && (
         <div className="saved-actions">
@@ -863,9 +1041,9 @@ function SavedItem({
           ) : (
             recoverable && (
               <>
-                {tok.photo === false && (
-                  <button type="button" className="btn btn--white btn--sm" onClick={() => onPut(zats)}>
-                    {t('saved.put')}
+                {photoAvailable === false && (
+                  <button type="button" className="btn btn--white btn--sm" data-testid="saved-recreate-photo" disabled={!canPut} onClick={() => onPut(zats)}>
+                    {t(tok.photo ? 'saved.recreate' : 'saved.put')}
                   </button>
                 )}
                 <button type="button" className="btn btn--white btn--sm" onClick={() => setTakingBack(true)}>

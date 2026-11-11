@@ -34,7 +34,7 @@ const server = createServer(async (req, res) => {
 await new Promise((ready, reject) => { server.once('error', reject); server.listen(4317, '127.0.0.1', ready) })
 const base = 'http://127.0.0.1:4317' + prefix
 try {
-  for (const [script, extra] of [['flow.mjs', {}], ['demo-flow.mjs', {}], ['demo-flow.mjs', { NO_STORAGE: '1' }], ['security-headers.mjs', {}]]) {
+  for (const [script, extra] of [['flow.mjs', {}], ['history.mjs', {}], ['demo-flow.mjs', {}], ['demo-flow.mjs', { NO_STORAGE: '1' }], ['security-headers.mjs', {}]]) {
     const code = await new Promise((done, reject) => {
       const child = spawn(process.execPath, [fileURLToPath(new URL(script, import.meta.url))], {
         stdio: 'inherit',

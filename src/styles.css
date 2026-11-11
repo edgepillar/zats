@@ -1801,6 +1801,23 @@ p + p {
   line-height: 1.4;
   color: var(--bad);
 }
+.history-photo {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  overflow: auto;
+}
+.history-photo::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+.history-photo .done-photo {
+  margin-bottom: 20px;
+}
 .btn--white {
   background: var(--surface);
 }

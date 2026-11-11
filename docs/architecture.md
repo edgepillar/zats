@@ -32,14 +32,20 @@ exponents and excessive amounts are rejected without deleting or truncating char
 different value. An invalid amount disables the deposit action. The current limit is 1,000 ZNN.
 
 The app attempts to record the secret in History before showing its deposit address. A pending
-record and an IndexedDB copy of the selected image support recovery across reloads. This depends
+record and an IndexedDB copy of the selected image support recovery across reloads. Sources are
+keyed by account, and the original single-slot pending format remains readable. The deposit
+preview is restored while waiting. This depends
 on available, retained browser storage. If saving fails, the warning and recovery material must
 be handled before funding; clearing a profile can still lose its records. Keep an offline backup.
 
 The deposit watcher polls every three seconds. Only a positive ZNN total triggers embedding;
 QSR alone and unsolicited tokens do not fund a photo. The amount shown comes from the node's
 reported balance and kept incoming transfers, rather than the originally requested amount.
-Embedding runs in a worker, then the PNG can be downloaded, copied or shared as a file.
+Embedding runs in a worker. The exact PNG and its creation amount are stored per account in
+IndexedDB before the matching pending deposit and source are cleared. A reload during embedding
+can therefore resume from the deposit and original image. An aborted or failed PNG save leaves
+that recovery data intact and shows a download warning. The PNG can be downloaded, copied or
+shared as a file.
 
 ## Reading and claiming
 
@@ -71,9 +77,18 @@ outcome. Funds may already have moved. Check the photo account and recipient wal
 another attempt; the app does not automatically retry publication. A successful `SweepResult`
 contains the canonical recipient, sent amounts and returned block hashes.
 
-History can re-read an account when opened. It offers the same sweep for taking funds back and
-can embed a saved funded secret in a replacement photo. It is local recovery material, not a
-server-synchronized transaction archive.
+History polls while open on the visible Hide screen, schedules the next read five seconds after
+the previous read finishes, and refreshes on focus, visibility and network restoration. A row
+pauses its reads while its take-back operation is busy. Local wallet writes and storage events
+from other tabs update the list without a reload.
+
+Saved PNGs can be opened in a dialog without stopping a deposit, including after a claim or while
+offline. The image's creation amount is separate from the account's current status. For legacy
+records without a stored PNG, a funded secret can be embedded in a replacement image regardless
+of the old `photo` flag. Previous versions did not keep completed PNGs; their lost original images
+cannot be reconstructed from the secret alone. Deleting a History row also requests removal of
+its stored image and source. This is local recovery material, not a server-synchronized archive;
+browser storage can be cleared or evicted, so downloads and offline recovery backups still matter.
 
 ## Kept tokens and node connections
 
