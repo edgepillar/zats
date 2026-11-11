@@ -866,6 +866,7 @@ function SavedList({
   const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden')
   const [round, setRound] = useState(0)
+  useEffect(() => { if (!tokens.length) setOpen(false) }, [tokens.length])
   useEffect(() => {
     const refresh = () => {
       const shown = document.visibilityState !== 'hidden'
@@ -883,7 +884,7 @@ function SavedList({
   }, [])
   if (!tokens.length) return null
   return (
-    <details className="saved" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details className="saved" onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="saved-summary">
         <span className="saved-title">{t('saved.title')}</span>
         <span className="saved-count">{tokens.length}</span>

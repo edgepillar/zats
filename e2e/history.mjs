@@ -54,14 +54,14 @@ async function digest(page, selector) {
 
 async function history(page) {
   if (!await page.$eval('details.saved', element => element.open)) await page.click('details.saved summary')
-  await page.waitForFunction(() => document.querySelector('details.saved')?.open)
+  await page.waitForSelector('details.saved[open] .group', { visible: true })
 }
 
 const row = address => `.saved-item[data-address="${address}"]`
 async function openPhoto(page, address, expected) {
-  await page.waitForSelector(row(address) + ' [data-testid="saved-view-photo"]')
+  await page.waitForSelector(row(address) + ' [data-testid="saved-view-photo"]', { visible: true })
   await page.click(row(address) + ' [data-testid="saved-view-photo"]')
-  await page.waitForSelector('dialog[open] .done-photo img')
+  await page.waitForSelector('dialog[open] .done-photo img', { visible: true })
   assert.equal(await digest(page, 'dialog[open] .done-photo img'), expected)
 }
 
@@ -232,6 +232,9 @@ try {
 
   assert.deepEqual(logs, [])
   console.log(JSON.stringify({ historyRecovery: results, mainnetTransactions: 0 }, null, 2))
+} catch (error) {
+  console.error(JSON.stringify({ historyRecoveryCompletedBeforeFailure: results }, null, 2))
+  throw error
 } finally {
   await browser.close()
 }
