@@ -1,4 +1,5 @@
 import { loadJson, removeKey, saveJson } from './storage'
+import { DEMO } from './config'
 
 /**
  * What must survive a reload: the deposit address being paid, and every secret made. A secret is
@@ -30,8 +31,8 @@ export interface SavedToken {
   photo?: boolean
 }
 
-const PENDING = 'zats.pending'
-const TOKENS = 'zats.tokens'
+const PENDING = DEMO ? 'zats.demo.pending' : 'zats.pending'
+const TOKENS = DEMO ? 'zats.demo.tokens' : 'zats.tokens'
 
 export const loadPending = (): PendingDeposit | null => loadJson<PendingDeposit | null>(PENDING, null)
 export const savePending = (p: PendingDeposit): boolean => saveJson(PENDING, p)

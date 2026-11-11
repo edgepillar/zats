@@ -12,6 +12,9 @@ Kakaonut's; the money side is Zenon.
 
 > Proof of concept. Use small amounts.
 
+**Mainnet claim status: not yet verified.** Start with the simulated demo. A real transfer or
+claim requires explicit approval; follow the [0.1 ZNN test guide](docs/mainnet-test.md).
+
 ## How it works
 
 ```
@@ -71,11 +74,13 @@ Unchanged from Kakaonut except for the marker and the payload:
 ## Run it
 
 ```sh
-npm install
+npm ci
 npm run dev        # copies the SDK's pow.js/pow.wasm into public/pow/ first
 npm test           # unit tests: stego, PNG, reader, secrets, addresses
 npm run build && npx vite preview --port 4317 &
 npm run e2e        # full make → fund → open → claim flow against a pretend node (needs Chrome)
+npm run build:pages # combined mainnet site and /demo/ output in dist/
+npm run e2e:pages   # both builds at a Pages project subpath, using simulated transfers only
 ```
 
 Nodes: the public mainnet nodes from [blog.zenon.info/public-nodes](https://blog.zenon.info/public-nodes/),
@@ -100,6 +105,16 @@ copied from mainnet and keeping its ledger in localStorage. A button stands in f
 deposit screen, a made photo opens straight on Redeem (for hosts that block downloads), and
 "Use a demo address" fills in a fresh z1 address. Keys and signatures are real; proof of work is
 skipped. It runs under a strict CSP (own files only, no eval, no outside connections).
+
+The demo uses separate History, pending-deposit and photo storage when hosted beside the mainnet
+build. Never fund a demo address or open a funded photo in the demo.
+
+## Hosting
+
+The [Pages workflow](.github/workflows/pages.yml) tests and builds both sites on pushes. Publishing
+is a separate manual action because a Pages website is publicly accessible even when its source
+repository is private. See [hosting instructions](docs/hosting.md). No deployment or simulated test
+qualifies a real mainnet claim.
 
 ## Licence
 

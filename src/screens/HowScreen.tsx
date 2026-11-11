@@ -8,7 +8,7 @@ import { PixelExplainer } from '../components/PixelExplainer'
 
 type Tab = 'simple' | 'advanced'
 const TABS: Tab[] = ['simple', 'advanced']
-const REPO = 'https://github.com/swedishfrenchpress/kakaonut'
+const REPO = 'https://github.com/edgepillar/zats'
 
 export function HowScreen() {
   const { t } = useI18n()

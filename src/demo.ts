@@ -6,7 +6,7 @@
  * skipped and each block takes a moment instead.
  */
 
-export const DEMO = import.meta.env.VITE_DEMO === '1'
+export { DEMO } from './config'
 
 const ZNN = 'zts1znnxxxxxxxxxxxxx9z4ulx'
 const QSR = 'zts1qsrxxxxxxxxxxxxxmrhjll'

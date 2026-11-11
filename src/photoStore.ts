@@ -5,7 +5,9 @@
  * Nothing here leaves the device.
  */
 
-const DB = 'zats'
+import { DEMO } from './config'
+
+const DB = DEMO ? 'zats.demo' : 'zats'
 const STORE = 'photos'
 const KEY = 'pending'
 

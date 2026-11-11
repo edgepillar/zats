@@ -17,6 +17,11 @@ page.on('console', (m) => { if (m.type() === 'error' || /Content Security Policy
 page.on('requestfailed', (r) => logs.push('requestfailed: ' + r.url().slice(0, 120)))
 await page.setViewport({ width: 1280, height: 900 })
 if (process.env.NO_STORAGE) await page.evaluateOnNewDocument(() => { Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('denied', 'SecurityError') } }) })
+else await page.evaluateOnNewDocument(() => {
+  // Public sentinels stand in for existing mainnet records on this same origin.
+  localStorage.setItem('zats.tokens', JSON.stringify([{ id: 'public-mainnet-sentinel' }]))
+  localStorage.setItem('zats.pending', JSON.stringify({ address: 'public-mainnet-sentinel' }))
+})
 // Strict policy like the artifact viewer's: own files only, no eval, no outside connections.
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; worker-src 'self' blob:; media-src 'self' blob: data:"
 await page.setRequestInterception(true)
@@ -80,9 +85,13 @@ await page.click('details.saved summary')
 await page.waitForFunction(() => /Claimed|Unclaimed/.test(document.querySelector('.saved-item .status')?.textContent ?? ''), { timeout: 20000 })
 r.historyAfterReload = await page.$$eval('.saved-item', (els) => els.map((e) => e.innerText.replace(/\n+/g, ' | ')))
 r.chainRecipient = await page.evaluate((to) => { const c = JSON.parse(localStorage.getItem('zats.demo.chain')); return (c.unreceived[to] ?? []).map((b) => b.amount) }, r.to)
+r.mainnetRecordsUnchanged = await page.evaluate(() =>
+  localStorage.getItem('zats.tokens') === JSON.stringify([{ id: 'public-mainnet-sentinel' }]) &&
+  localStorage.getItem('zats.pending') === JSON.stringify({ address: 'public-mainnet-sentinel' }),
+)
 r.logs = logs
 console.log(JSON.stringify(r, null, 1))
 await browser.close()
-const ok = r.sent?.includes('Sent to') && (process.env.NO_STORAGE || /Claimed/.test(r.historyAfterReload?.[0] ?? '')) && r.logs.length === 0
+const ok = r.sent?.includes('Sent to') && r.mainnetRecordsUnchanged && /Claimed/.test(r.historyAfterReload?.[0] ?? '') && r.logs.length === 0
 console.log(ok ? 'PASS' : 'FAIL')
 process.exit(ok ? 0 : 1)
