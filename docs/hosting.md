@@ -6,8 +6,8 @@ GitHub Pages publication remains a separate, manually triggered option.
 
 ## GitHub Pages
 
-The repository is private. A Pages deployment publishes the generated website publicly;
-repository privacy does not make the website private. Private-repository Pages also requires
+A Pages deployment publishes the generated website publicly, regardless of repository visibility.
+Private-repository Pages also requires
 an eligible GitHub plan. See [GitHub Pages availability](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
 and [publishing-source visibility](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
@@ -42,8 +42,8 @@ simulated. They do not establish mainnet qualification.
 
 ## Publication
 
-1. Obtain explicit confirmation that the website may be publicly accessible. Keep the repository
-   private unless the maintainer separately requests a visibility change.
+1. Obtain explicit confirmation that the website may be publicly accessible. Source-repository
+   visibility is a separate maintainer decision; it does not enable Pages publication.
 2. In repository **Settings → Pages**, select **GitHub Actions** as the publishing source. If the
    account plan refuses private-repository Pages, stop and report that limitation.
 3. Open **Actions → Test and deploy Pages → Run workflow**, select `main`, and set `publish` to

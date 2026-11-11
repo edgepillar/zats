@@ -2,7 +2,8 @@
 
 Production origin: **https://zats.vercel.app/**. Demo: **https://zats.vercel.app/demo/**.
 The initial production deployment was verified on **2026-11-11**. No custom domain is configured.
-Mainnet claim status remains **NOT RUN**; deployment and simulated transfers do not qualify it.
+The initial deployment evidence below does not include a real-fund claim. Keep mainnet test
+receipts private; deployment and simulated transfers do not qualify a real transaction.
 
 ## Initial deployment evidence
 
@@ -20,7 +21,9 @@ Mainnet claim status remains **NOT RUN**; deployment and simulated transfers do 
 These observations bind to the initial revision above. A later documentation commit or deployment
 does not retag them as execution evidence for a different revision.
 
-Keep `edgepillar/zats` private. Use the project name `zats` under an account or team with the
+Choose source-repository visibility separately from hosting. Before making source public, review
+its full history and Actions logs for credentials, recovery material and personal information.
+Use the project name `zats` under an account or team with the
 public `edgepillar` identity. Review the account/team slug before deployment: Vercel-generated
 deployment URLs can include that slug. Do not use a personal name or private identifier there.
 No wallet, mnemonic, photo secret or private node credential belongs in Vercel environment
@@ -52,9 +55,10 @@ WebSocket connectivity or a real transaction.
 
 1. Confirm the exact `main` revision has passing CI. Verify the connected Vercel account/team and
    GitHub identity before creating or linking anything. Do not overwrite an existing project.
-2. Import only the private `edgepillar/zats` repository. Limit GitHub App access to this repository
+2. Import only the `edgepillar/zats` repository. Limit GitHub App access to this repository
    when the connection offers that choice. Set the Node.js version to 22.x and review the build
-   settings above. Keep source and deployment logs restricted to the project account.
+   settings above. Keep private operational records and Vercel deployment logs restricted to the
+   project account.
 3. Deploy and retain the returned deployment ID, revision and URL. Do not guess that
    `zats.vercel.app` is available. Select a plan appropriate for the actual use; Hobby is for
    personal, non-commercial use. Paid plans or changes to billing require separate authorization.

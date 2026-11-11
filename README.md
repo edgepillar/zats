@@ -111,7 +111,8 @@ build. Never fund a demo address or open a funded photo in the demo.
 
 ## Hosting
 
-Vercel can serve the combined build at `/` and `/demo/` while this repository stays private.
+Vercel serves the combined build at `/` and `/demo/`. Repository visibility is independent of
+website hosting. Recovery material and private operational receipts must never be committed.
 See the [Vercel and custom-domain guide](docs/vercel.md). Select the final production origin
 before funding: browser History does not migrate automatically between domains.
 
