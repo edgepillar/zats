@@ -1,7 +1,24 @@
 # Vercel deployment and a stable mainnet origin
 
-Deployment status: **NOT DEPLOYED**. Domain configuration status: **NOT CONFIGURED**.
-These are preparation instructions, not evidence of a live site or mainnet execution.
+Production origin: **https://zats.vercel.app/**. Demo: **https://zats.vercel.app/demo/**.
+The initial production deployment was verified on **2026-11-11**. No custom domain is configured.
+Mainnet claim status remains **NOT RUN**; deployment and simulated transfers do not qualify it.
+
+## Initial deployment evidence
+
+- Source: [`278c7ab2cee87d1863f55b27cdf6147b6f880fcd`](https://github.com/edgepillar/zats/commit/278c7ab2cee87d1863f55b27cdf6147b6f880fcd).
+- [Hosted CI](https://github.com/edgepillar/zats/actions/runs/42958602676) passed unit tests, both
+  builds, and simulated browser flows at `/` and `/zats/`.
+- Vercel reported **Ready** for that source. Both production entry pages rendered, with the demo
+  banner only at `/demo/`. `/demo` returned a 308 redirect to `/demo/`.
+- Mainnet and demo PoW file HEAD requests returned 200 with the expected content types. These
+  checks did not execute proof of work in a live mainnet claim.
+- A 0.1 ZNN **simulated** make, embed, open and claim flow completed on the deployed demo.
+- Final-origin mainnet node connectivity and real-fund transfers were not established by these
+  checks. Funding and claiming still require the acceptance guide and separate approvals.
+
+These observations bind to the initial revision above. A later documentation commit or deployment
+does not retag them as execution evidence for a different revision.
 
 Keep `edgepillar/zats` private. Use the project name `zats` under an account or team with the
 public `edgepillar` identity. Review the account/team slug before deployment: Vercel-generated
@@ -45,10 +62,13 @@ WebSocket connectivity or a real transaction.
    that the demo banner appears only in the demo, and test final-origin node access read-only.
    Do not create a funded photo on a temporary preview domain.
 
-## Recommended production domain
+## Optional future custom domain
 
-Use **`https://zats.edgepillar.com/`** as the proposed stable production origin, with the demo at
-**`https://zats.edgepillar.com/demo/`**. These are proposed destinations, not deployed URLs.
+The current choice is to use Vercel for both hosting and the production hostname. Keep
+**`https://zats.vercel.app/`** as the production origin for now; unique deployment URLs are previews.
+
+If a custom domain is requested later, **`https://zats.edgepillar.com/`** and its `/demo/` route
+are options. They are not configured or deployed destinations.
 
 1. Add only `zats.edgepillar.com` to the verified Vercel project. If it is already assigned
    elsewhere, inspect that assignment and stop rather than forcing reassignment.
@@ -62,9 +82,11 @@ Use **`https://zats.edgepillar.com/`** as the proposed stable production origin,
    redirects only after the final domain is verified.
 
 Browser localStorage and IndexedDB are scoped to an origin. History, pending deposits and photos
-created at a `vercel.app` address do not automatically appear at `zats.edgepillar.com`. Settle on
-the final HTTPS origin before funding. A redirect does not migrate these records. Preserve the
-original browser profile, PNG and recovery material if an origin is ever changed.
+created at a `vercel.app` address do not automatically appear at `zats.edgepillar.com`. A redirect
+does not migrate these records. Before changing origins, reconcile all pending deposits and
+funded photos at the old origin; any recovery transfer needs fresh approval. Preserve the old
+browser profile, original PNGs and recovery material. Do not clear them merely because the new
+site is live.
 
 ## Mainnet remains a separate approval
 

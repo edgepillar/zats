@@ -1,10 +1,12 @@
 # Mainnet acceptance test: 0.1 ZNN
 
-**Status: NOT RUN.** A passing build, simulated browser test or Pages deployment does not prove a
+**Status: NOT RUN.** A passing build, simulated browser test or website deployment does not prove a
 real mainnet claim. This guide authorizes no transaction. An assistant must obtain explicit
 approval before funding, claiming, receiving into a wallet, recovering or taking funds back.
 
 The test amount is **0.1 native ZNN = 10,000,000 zats**. Do not increase it to troubleshoot.
+The current production origin is **https://zats.vercel.app/**; its `/demo/` route is simulated.
+Do not use a unique preview-deployment URL for this test.
 Sender, photo account and recipient are publicly linked on the ledger. The PNG and its 24 words
 control the photo account; neither is encrypted. Keep them out of chats, issue reports, CI,
 screenshots, repositories and shared folders. Use a non-personal sample photo.
@@ -13,8 +15,9 @@ screenshots, repositories and shared folders. Use a non-personal sample photo.
 
 1. Confirm the exact `main` commit has passing unit tests, both builds and simulated browser
    tests. Confirm the selected host's deployment succeeded and note its revision privately. Use
-   the final HTTPS production domain before funding; a preview-to-custom-domain change does not
-   migrate browser History. See the [Vercel deployment guide](vercel.md).
+   the selected HTTPS production origin above before funding. A later domain change does not
+   migrate browser History; reconcile pending or funded photos before any move. See the
+   [Vercel deployment guide](vercel.md).
 2. Rehearse the complete flow at the production site's `/demo/` route (`/zats/demo/` on GitHub
    Pages) using the pretend-wallet button. Never send real ZNN to a demo address. Close that tab
    before the real test.
