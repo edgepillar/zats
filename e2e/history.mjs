@@ -135,7 +135,23 @@ try {
   await closePhoto(page)
   results.multipleExactPngsSurviveReload = true
 
-  // Simulate a claim made elsewhere, leaving this History list open throughout.
+  // Both modes expose one shared list; moving between them preserves its open state and records.
+  await page.goto(base + '#redeem', { waitUntil: 'networkidle0' })
+  await page.waitForSelector('.action-history details.saved[open] .group', { visible: true })
+  assert.equal(await page.$$eval('details.saved', elements => elements.length), 1)
+  assert.equal(await page.$eval('.saved-count', element => element.textContent), '2')
+  await openPhoto(page, first, firstHash)
+  const dialogStyle = await page.$eval('dialog[open]', element => ({
+    background: getComputedStyle(element).backgroundColor,
+    opacity: getComputedStyle(element).opacity,
+  }))
+  assert.match(dialogStyle.background, /^rgb\(\d+, \d+, \d+\)$/)
+  assert.equal(dialogStyle.opacity, '1')
+  await closePhoto(page)
+  results.sameHistoryAndPhotosOnRedeem = true
+  results.photoDialogHasOpaqueBackground = true
+
+  // Simulate a claim made elsewhere, leaving History open on Redeem throughout.
   await page.evaluate(address => {
     window.__fake.state.unreceived[address] = []
     window.__fake.state.accounts[address] = { height: 2, balances: {}, frontier: null }
@@ -194,12 +210,14 @@ try {
   await page.waitForSelector(row(first) + ' [data-testid="saved-recreate-photo"]')
   assert.equal(await page.$eval(row(first) + ' [data-testid="saved-recreate-photo"]', element => element.textContent.trim()), 'Recreate photo')
   await page.click(row(first) + ' [data-testid="saved-recreate-photo"]')
+  await page.waitForFunction(() => location.hash === '#hide')
   await page.waitForSelector('[data-testid="make-photo-input"]')
   await (await page.$('[data-testid="make-photo-input"]')).uploadFile(sample)
   await made(page)
   await openPhoto(page, first, await digest(page, '.make-grid .done-photo img'))
   await closePhoto(page)
   results.legacyPhotoFlagDoesNotHideRecovery = true
+  results.recreateFromRedeemReturnsToHide = true
   assert.equal(await page.evaluate(() => window.__fake.state.published.length), 0)
 
   // Abort the archive transaction while keeping its source valid. A refresh must retry only

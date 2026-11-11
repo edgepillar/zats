@@ -77,7 +77,10 @@ outcome. Funds may already have moved. Check the photo account and recipient wal
 another attempt; the app does not automatically retry publication. A successful `SweepResult`
 contains the canonical recipient, sent amounts and returned block hashes.
 
-History polls while open on the visible Hide screen, schedules the next read five seconds after
+One shared History is available below both Hide and Redeem. Switching modes preserves its open
+state and records; viewing a PNG does not replace the selected Redeem photo. Recreation returns
+to Hide. History polls while open on the visible action screen, schedules the next read five
+seconds after
 the previous read finishes, and refreshes on focus, visibility and network restoration. A row
 pauses its reads while its take-back operation is busy. Local wallet writes and storage events
 from other tabs update the list without a reload.

@@ -113,6 +113,17 @@ await shot('2-open')
 result.cardAmount = await page.$eval('.money-main', (e) => e.textContent)
 result.cardSub = await page.$eval('.money-sub', (e) => e.textContent)
 
+// The shared History remains usable without replacing the photo selected on Redeem.
+const redeemPreview = await page.$eval('.redeem-shot img', el => el.src)
+await page.click('details.saved summary')
+await page.waitForSelector('[data-testid="saved-view-photo"]', { visible: true })
+await page.click('[data-testid="saved-view-photo"]')
+await page.waitForSelector('dialog[open] .done-photo img', { visible: true })
+await page.keyboard.press('Escape')
+await page.waitForSelector('dialog[open]', { hidden: true })
+result.redeemHistoryPreservesSelection = await page.$eval('.redeem-shot img', (el, src) => el.src === src, redeemPreview)
+await page.click('details.saved summary')
+
 // 4. Claim: a bad address first, then a real one
 await page.click('.money-cta')
 await page.type('.money-ln-input', 'z1qnotarealaddress')
@@ -173,6 +184,7 @@ const ok =
   result.invalidAmountsBlocked &&
   result.pendingPhotoSurvivesReload &&
   result.archivedPngMatches &&
+  result.redeemHistoryPreservesSelection &&
   result.destinationsBlockedBeforeRpc &&
   result.backupWordCount === 24 &&
   result.backupControlsDeposit &&

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useI18n } from '../i18n'
 import type { Mode } from '../nav'
 import { MakeFlow } from './MakeFlow'
@@ -11,6 +11,7 @@ import { RedeemFlow } from './RedeemFlow'
  */
 export function ActionSection({ mode, active }: { mode: Mode; active: boolean }) {
   const { t } = useI18n()
+  const [historyHost, setHistoryHost] = useState<HTMLDivElement | null>(null)
   const head = (title: string, sub?: string): ReactNode => (
     <div className="make-head">
       <h2 id="make-title">{title}</h2>
@@ -20,7 +21,12 @@ export function ActionSection({ mode, active }: { mode: Mode; active: boolean })
   return (
     <section className="make" id="make" aria-labelledby="make-title" data-mode={mode}>
       <div hidden={mode !== 'hide'}>
-        <MakeFlow active={active && mode === 'hide'} head={mode === 'hide' && head(t('make.title'))} />
+        <MakeFlow
+          active={active && mode === 'hide'}
+          head={mode === 'hide' && head(t('make.title'))}
+          historyHost={historyHost}
+          historyActive={active}
+        />
       </div>
       <div hidden={mode !== 'redeem'}>
         <RedeemFlow
@@ -28,6 +34,7 @@ export function ActionSection({ mode, active }: { mode: Mode; active: boolean })
           head={mode === 'redeem' && ((sub: string) => head(t('redeem.title'), sub))}
         />
       </div>
+      <div className="action-history" ref={setHistoryHost} />
     </section>
   )
 }

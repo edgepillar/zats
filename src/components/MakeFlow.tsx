@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import QRCode from 'qrcode'
 import { zatsUnit, useI18n } from '../i18n'
 import { scrollBehavior, useDropImages, useFlash, usePasteImages } from '../hooks'
@@ -82,7 +83,12 @@ function room(photo: LoadedPhoto, edge: number): number {
 }
 
 /** `head` is the section heading; it sits in the grid beside the photo on wide screens. */
-export function MakeFlow({ active, head }: { active: boolean; head: ReactNode }) {
+export function MakeFlow({ active, head, historyHost, historyActive }: {
+  active: boolean
+  head: ReactNode
+  historyHost: HTMLElement | null
+  historyActive: boolean
+}) {
   const { t, num } = useI18n()
   const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
   /** Why the last photo chosen was turned away. */
@@ -521,16 +527,21 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
   return (
     <>
       {active && <DropOverlay show={dragging} label={t('drop.overlay')} />}
-      {historyPhoto && <SavedPhotoDialog value={historyPhoto} onClose={() => setHistoryPhoto(null)} />}
       <div className={`make-grid${photoSlot ? '' : ' make-grid--solo'}`} ref={card}>
         {head}
         {photoSlot && <div className={`make-photo${photoAside ? ' make-photo--aside' : ''}`}>{photoSlot}</div>}
         <div className="make-panel">{panel}</div>
+      </div>
+      {historyHost && createPortal(<>
+        {historyPhoto && <SavedPhotoDialog value={historyPhoto} onClose={() => setHistoryPhoto(null)} />}
         <SavedList
-          active={active}
+          active={historyActive}
           tokens={saved}
           canPut={stage.k !== 'deposit' && stage.k !== 'creating' && stage.k !== 'embedding'}
-          onPut={(tok, amount) => void putSavedPhoto(tok, amount)}
+          onPut={(tok, amount) => {
+            location.hash = '#hide'
+            void putSavedPhoto(tok, amount)
+          }}
           onView={async (tok) => {
             const photo = await loadMadePhoto(tok.id)
             if (!photo) return false
@@ -545,7 +556,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
             }
           }}
         />
-      </div>
+      </>, historyHost)}
     </>
   )
 }
