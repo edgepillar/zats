@@ -7,6 +7,7 @@ import { Typing } from './Chat'
 import { CheckIcon } from './Icons'
 import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
+import { DEMO } from '../demo'
 
 /**
  * What Open shows when a photo holds zats, shaped like a money message in a chat: the amount on
@@ -56,9 +57,11 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
               <CheckIcon size={18} />
               <span>{t('sweep.sentTo', { address: short(sent.to) })}</span>
             </p>
-            <a className="money-row money-cta money-cta--small" href={explorerUrl(sent.to)} target="_blank" rel="noopener noreferrer">
-              {t('claim.explorer')}
-            </a>
+            {!DEMO && (
+              <a className="money-row money-cta money-cta--small" href={explorerUrl(sent.to)} target="_blank" rel="noopener noreferrer">
+                {t('claim.explorer')}
+              </a>
+            )}
           </>
         ) : gone ? (
           <p className="money-row money-row--note">{t(`state.${check.claim}`)}</p>
@@ -78,7 +81,7 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
             <button type="button" className="money-row money-cta" aria-controls={formId} onClick={() => setMode('claim')}>
               {t('claim.button')}
             </button>
-            <div className="money-split">
+            <div className={`money-split${DEMO ? ' money-split--one' : ''}`}>
               <button
                 type="button"
                 onClick={async () => {
@@ -88,9 +91,11 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
               >
                 <FlashLabel flash={copied}>{t('claim.copy')}</FlashLabel>
               </button>
-              <a href={explorerUrl(address)} target="_blank" rel="noopener noreferrer">
-                {t('claim.explorer')}
-              </a>
+              {!DEMO && (
+                <a href={explorerUrl(address)} target="_blank" rel="noopener noreferrer">
+                  {t('claim.explorer')}
+                </a>
+              )}
             </div>
           </>
         )}

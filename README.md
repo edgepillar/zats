@@ -81,6 +81,15 @@ npm run e2e        # full make → fund → open → claim flow against a preten
 Nodes: the public mainnet nodes from [blog.zenon.info/public-nodes](https://blog.zenon.info/public-nodes/),
 tried in order. Override with `VITE_ZNN_NODES=wss://a:35998,wss://b:35998`.
 
+## Demo build
+
+`npm run build:demo` builds a version that needs no ZNN and no network (`dist-demo/`): a pretend
+Zenon node runs inside the page (`src/demo.ts`), answering the same JSON-RPC calls with shapes
+copied from mainnet and keeping its ledger in localStorage. A button stands in for Syrius on the
+deposit screen, a made photo opens straight on Redeem (for hosts that block downloads), and
+"Use a demo address" fills in a fresh z1 address. Keys and signatures are real; proof of work is
+skipped. It runs under a strict CSP (own files only, no eval, no outside connections).
+
 ## Licence
 
 MIT. Kakaonut © 2026 Erik; the Zenon changes © 2026 edgepillar. See [LICENSE](LICENSE).

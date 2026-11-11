@@ -5,6 +5,7 @@ import { readStickerInWorker, warmUpReader } from '../workerClient'
 import type { StickerReadResult } from '../read'
 import { isTestPayload } from '../testPayload'
 import { OfflineError, checkClaimState, loadZenon, summarizeToken, type TokenSummary } from '../zenon'
+import { DEMO } from '../demo'
 import { canReadClipboardImages, readClipboardImage } from '../actions'
 import { ClaimCard, type TokenCheck } from './ClaimCard'
 import { DropOverlay } from './Composer'
@@ -133,6 +134,19 @@ export function RedeemFlow({ active, head }: { active: boolean; head: false | ((
     setNotice(null)
     setStage({ k: 'idle' })
   }
+
+  // Demo: a photo just made on Hide opens here directly (the demo page can't download it).
+  const readRef = useRef(read)
+  readRef.current = read
+  useEffect(() => {
+    if (!DEMO) return
+    const open = (e: Event) => {
+      const file = (e as CustomEvent<File>).detail
+      if (file instanceof File) void readRef.current([file])
+    }
+    window.addEventListener('zats:open', open)
+    return () => window.removeEventListener('zats:open', open)
+  }, [])
 
   usePasteImages((files) => void read(files), active)
   const dragging = useDropImages((files) => void read(files), active)

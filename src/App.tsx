@@ -8,6 +8,7 @@ import { TestScreen } from './screens/TestScreen'
 import { OpenScreen } from './screens/OpenScreen'
 import { HowScreen } from './screens/HowScreen'
 import { goToMode, modeFromHash, scrollToActions, type Mode } from './nav'
+import { DEMO } from './demo'
 
 /** #open (the chat-style reader) and #test are kept for testing chat apps; nothing links to them. */
 type Page = 'make' | 'open' | 'test' | 'how'
@@ -49,6 +50,7 @@ export function App() {
 
   return (
     <div className="app">
+      {DEMO && <p className="demo-banner">{t('demo.banner')}</p>}
       <header className="top">
         <div className="top-row">
           <a className="brand" href="#" aria-label={t('app.name')}>

@@ -7,6 +7,8 @@
  * Account 0 of the 24 words is used, the same one Syrius opens, so the words also work there.
  */
 
+import { DEMO } from './demo'
+
 type Sdk = typeof import('znn-typescript-sdk')
 type ZenonClient = ReturnType<Sdk['Zenon']['getInstance']>
 type KeyPair = ReturnType<InstanceType<Sdk['KeyStore']>['getKeyPair']>
@@ -59,7 +61,7 @@ export const loadZenon = (): Promise<Sdk> =>
     .then((m) => {
       // Proof of work runs in the SDK's own worker, from public/pow/ (copied there by scripts/copy-pow.mjs).
       m.Zenon.setPowBasePath(`${import.meta.env.BASE_URL}pow/`)
-      if (m.isPowWorkerSupported()) m.Zenon.usePowWorker()
+      if (!DEMO && m.isPowWorkerSupported()) m.Zenon.usePowWorker()
       return m
     })
     .catch((e: unknown) => {

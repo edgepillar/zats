@@ -6,3 +6,4 @@ playwright-report
 *.local
 public/pow
 test-results
+dist-demo

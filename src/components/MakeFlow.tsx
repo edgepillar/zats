@@ -35,6 +35,7 @@ import { Buddies, Loading } from './Buddies'
 import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon, TrashIcon } from './Icons'
 import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
+import { DEMO, demoFund } from '../demo'
 
 /**
  * Make: photo → amount → a fresh Zenon address → the sender sends ZNN there → photo with zats inside.
@@ -192,9 +193,11 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       createdAt: pending.createdAt,
       photo: false,
     }
-    const stored = addToken(tok)
+    const ok = addToken(tok)
+    // In the demo nothing real can be lost, so a page without storage doesn't warn about it.
+    const stored = ok || DEMO
     clearPending()
-    setSaved(stored ? loadTokens() : (list) => [tok, ...list.filter((x) => x.id !== tok.id)])
+    setSaved(ok ? loadTokens() : (list) => [tok, ...list.filter((x) => x.id !== tok.id)])
     // The page may have reloaded while waiting (common on phones): get the photo back.
     let current = photoRef.current
     if (!current) {
@@ -250,8 +253,9 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
       const { token, address } = await newSecret()
       const createdAt = Date.now()
       // Saved to History first: whatever is sent to this address can always be found again.
-      const stored = addToken({ id: address, token, amount: 0, createdAt, photo: false })
-      if (stored) setSaved(loadTokens())
+      const ok = addToken({ id: address, token, amount: 0, createdAt, photo: false })
+      if (ok) setSaved(loadTokens())
+      const stored = ok || DEMO
       const pending: PendingDeposit = { token, address, amount, createdAt, edge }
       savePending(pending)
       if (photoFile.current) await savePendingPhoto(address, photoFile.current)
@@ -596,17 +600,27 @@ function DepositView({
       </p>
       <Loading className="waiting" label={offline ? t('deposit.offline') : t('deposit.waiting')} size={20} />
       <div className="stack">
+        {DEMO && (
+          <button
+            type="button"
+            className="btn btn--primary btn--xl btn--block"
+            data-testid="demo-send"
+            onClick={() => demoFund(pending.address, pending.amount)}
+          >
+            {t('demo.send', { znn: zatsToZnn(pending.amount) })}
+          </button>
+        )}
         <div className="invoice-buttons invoice-buttons--one">
           <button
             type="button"
-            className="btn btn--primary"
+            className={DEMO ? 'btn btn--quiet' : 'btn btn--primary'}
             onClick={async () => flash((await copyText(pending.address)) ? t('action.copied') : t('action.copyFailedShort'))}
           >
             {copied === t('action.copied') ? <CheckIcon size={18} className="flash-in" /> : <CopyIcon size={18} />}
             <FlashLabel flash={copied}>{t('deposit.copy')}</FlashLabel>
           </button>
         </div>
-        <p className="invoice-note">{t('deposit.hint')}</p>
+        <p className="invoice-note">{t(DEMO ? 'demo.hint' : 'deposit.hint')}</p>
         <button type="button" className="btn btn--text" onClick={onCancel}>
           {t('deposit.cancel')}
         </button>
@@ -632,15 +646,30 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
           , <span>{bytes(made.file.size)}</span>
         </p>
         <div className="stack">
-          <button
-            type="button"
-            className="btn btn--primary btn--xl btn--block"
-            onClick={() => downloadBlob(made.file, made.file.name)}
-          >
-            <DownloadIcon size={20} />
-            {t('action.download')}
-          </button>
-          {(share || canCopyImage()) && (
+          {DEMO ? (
+            <button
+              type="button"
+              className="btn btn--primary btn--xl btn--block"
+              data-testid="demo-open"
+              onClick={() => {
+                location.hash = '#redeem'
+                // After the page switch, so Redeem is showing when the photo opens.
+                setTimeout(() => window.dispatchEvent(new CustomEvent('zats:open', { detail: made.file })), 50)
+              }}
+            >
+              {t('demo.open')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn--primary btn--xl btn--block"
+              onClick={() => downloadBlob(made.file, made.file.name)}
+            >
+              <DownloadIcon size={20} />
+              {t('action.download')}
+            </button>
+          )}
+          {!DEMO && (share || canCopyImage()) && (
             <div className="btn-row">
               {share && (
                 <button
@@ -667,7 +696,7 @@ function Done({ stage, onAgain }: { stage: Extract<Stage, { k: 'done' }>; onAgai
             </div>
           )}
         </div>
-        <p className="done-tip">{t('make.done.tip')}</p>
+        <p className="done-tip">{t(DEMO ? 'demo.tip' : 'make.done.tip')}</p>
         {unsaved && <RawWords token={saved.token} />}
       </div>
       <button type="button" className="btn btn--text done-again" onClick={onAgain}>

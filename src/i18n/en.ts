@@ -167,6 +167,14 @@ export const en = {
   'saved.delete': 'Delete',
   'saved.deleteConfirm': 'Tap again to delete. Any ZNN sent to it will be lost.',
 
+  'demo.banner': 'Demo: a pretend Zenon network runs inside this page. No real ZNN moves.',
+  'demo.send': 'Send {znn} ZNN from a pretend wallet',
+  'demo.hint': 'In the demo nothing is sent for real: the button above stands in for Syrius.',
+  'demo.open': 'Open it on Redeem',
+  'demo.tip': 'In the demo the photo stays in this page, so open it on Redeem to claim it. On the real site you’d download it and send it as a file.',
+  'demo.address': 'Use a demo address',
+  'demo.pow': 'In the demo, proof of work is skipped. On mainnet each step takes about 20 seconds.',
+
   'footer.event': 'Built for the Zenon Network',
   'footer.dates': 'Proof of concept',
   'footer.edition': 'Use small amounts',

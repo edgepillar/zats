@@ -1267,10 +1267,13 @@ p + p {
 }
 .money-ln--busy {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   min-height: 76px;
-  padding: 18px 16px 14px;
+  padding: 18px 16px 6px;
+  text-align: center;
 }
 
 /* Loader: the coin, the photo and the bolt hop one after another */
@@ -3288,4 +3291,16 @@ select,
   .make-photo .picker:not(.picker--has) {
     max-height: calc(100svh - 96px);
   }
+}
+
+/* Demo builds: a strip above the header saying the network is pretend. */
+.demo-banner {
+  margin: 0;
+  padding: 8px 16px;
+  background: #3b1e1d;
+  color: #fee500;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
 }

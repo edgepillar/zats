@@ -16,7 +16,8 @@
     "predev": "node scripts/copy-pow.mjs",
     "prebuild": "node scripts/copy-pow.mjs",
     "prepreview": "node scripts/copy-pow.mjs",
-    "e2e": "node e2e/flow.mjs"
+    "e2e": "node e2e/flow.mjs",
+    "build:demo": "VITE_DEMO=1 vite build --outDir dist-demo"
   },
   "dependencies": {
     "@fontsource/bricolage-grotesque": "5.3.0",

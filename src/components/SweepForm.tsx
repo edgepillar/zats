@@ -3,6 +3,7 @@ import { useI18n } from '../i18n'
 import { prefersReducedMotion } from '../hooks'
 import { SweepError, parseAddress, sweep, type SweepResult, type SweepStep } from '../zenon'
 import { Loading } from './Buddies'
+import { DEMO, demoAddress } from '../demo'
 
 /**
  * A z1… address field that moves everything in a photo's account there. Used to claim a photo on
@@ -54,7 +55,9 @@ export function SweepForm({
     setStep({ k: 'connecting' })
     onBusy?.(true)
     // Keep the screen on while proof of work runs, where the browser allows it.
-    const lock = await navigator.wakeLock?.request('screen').catch(() => null)
+    const lock = await Promise.resolve()
+      .then(() => navigator.wakeLock?.request('screen'))
+      .catch(() => null)
     try {
       onDone(await sweep(token, to, setStep))
     } catch (err) {
@@ -76,7 +79,7 @@ export function SweepForm({
     return (
       <div id={id} className="money-ln money-ln--busy" data-testid="sweeping">
         <Loading label={label} size={26} />
-        <p className="money-ln-status">{t('sweep.pow')}</p>
+        <p className="money-ln-status">{t(DEMO ? 'demo.pow' : 'sweep.pow')}</p>
       </div>
     )
   }
@@ -112,6 +115,16 @@ export function SweepForm({
       <p className={`money-ln-status${error ? ' is-error' : ''}`} role="status">
         {error ?? ''}
       </p>
+      {DEMO && !address && (
+        <button
+          type="button"
+          className="btn btn--text btn--sm"
+          data-testid="demo-address"
+          onClick={async () => setAddress(await demoAddress())}
+        >
+          {t('demo.address')}
+        </button>
+      )}
     </form>
   )
 }
