@@ -187,7 +187,12 @@ try {
     window.__fake.state.accounts[address] = { height: 2, balances: {}, frontier: sent }
   }, first)
   await status(page, first, 'Claimed')
-  await page.waitForSelector(row(first) + ' [data-testid="history-tx"]', { visible: true })
+  // The status read can finish before the optional history lookup. Wait for both recovered blocks,
+  // rather than accepting a funding link left by an earlier in-flight balance read.
+  await page.waitForFunction((selector, hashes) => {
+    const links = Array.from(document.querySelectorAll(selector + ' [data-testid="history-tx"]'), link => link.href)
+    return hashes.every(hash => links.includes('https://zenonhub.io/explorer/transaction/' + hash))
+  }, { timeout: 45000 }, row(first), ['c'.repeat(64), 'd'.repeat(64)])
   const recoveredLinks = await page.$$eval(row(first) + ' [data-testid="history-tx"]', links => links.map(link => link.href))
   for (const hash of ['c'.repeat(64), 'd'.repeat(64)]) {
     assert(recoveredLinks.includes('https://zenonhub.io/explorer/transaction/' + hash))
