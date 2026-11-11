@@ -1813,6 +1813,17 @@ p + p {
   box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
   overflow: auto;
 }
+.syrius-wallet {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  display: grid;
+  gap: 12px;
+}
+.syrius-address { overflow-wrap: anywhere; font-size: 13px; }
+.syrius-backup { display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 13px; }
+.syrius-backup input { flex: 0 0 auto; margin-top: 3px; }
 .transaction-links {
   display: flex;
   flex-wrap: wrap;

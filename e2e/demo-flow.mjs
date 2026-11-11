@@ -16,6 +16,11 @@ page.on('pageerror', (e) => logs.push('pageerror: ' + e.message))
 page.on('console', (m) => { if (m.type() === 'error' || /Content Security Policy|Refused/.test(m.text())) logs.push(m.type() + ': ' + m.text().slice(0, 200)) })
 page.on('requestfailed', (r) => logs.push('requestfailed: ' + r.url().slice(0, 120)))
 await page.setViewport({ width: 1280, height: 900 })
+await page.evaluateOnNewDocument(() => {
+  window.__walletCalls = 0
+  const forbidden = () => { window.__walletCalls++; throw new Error('Demo accessed an injected wallet') }
+  window.zenon = { isSyriusExtension: true, connect: forbidden, getAccounts: forbidden, getChainId: forbidden, sendTransaction: forbidden, on: forbidden, removeListener: forbidden }
+})
 if (process.env.NO_STORAGE) await page.evaluateOnNewDocument(() => { Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('denied', 'SecurityError') } }) })
 else await page.evaluateOnNewDocument(() => {
   // Public sentinels stand in for existing mainnet records on this same origin.
@@ -77,6 +82,7 @@ r.sweepSeconds = Math.round((Date.now() - s0) / 1000)
 await wait(500)
 await shot('5-sent')
 r.sent = await page.$eval('[data-testid="sweep-sent"]', (e) => e.innerText.replace(/\n+/g, ' | '))
+if (await page.evaluate(() => window.__walletCalls !== 0 || !!document.querySelector('[data-testid^="syrius-"]'))) throw new Error('Demo exposed a real wallet integration')
 if (process.env.NO_STORAGE) { r.unsavedWarnings = await page.$$eval('.raw-token, .invoice-warn', (e) => e.length); r.logs = logs; console.log(JSON.stringify(r, null, 1)); await browser.close(); console.log(r.logs.length === 0 && r.unsavedWarnings === 0 ? 'PASS' : 'FAIL'); process.exit(r.logs.length === 0 && r.unsavedWarnings === 0 ? 0 : 1) }
 // Reload: the pretend chain and History survive
 await page.reload({ waitUntil: 'networkidle0' })

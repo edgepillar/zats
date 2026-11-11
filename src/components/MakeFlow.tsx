@@ -44,6 +44,7 @@ import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
 import { DEMO, demoFund } from '../demo'
 import { MAX_AMOUNT, parseZats } from '../amount'
+import { SyriusFunding } from './SyriusFunding'
 import { transactionHashes } from '../explorer'
 import { TransactionLinks } from './TransactionLinks'
 
@@ -656,6 +657,7 @@ function DepositView({
   const [qr, setQr] = useState<string | null>(null)
   const [copied, flash] = useFlash()
   const [backupCopied, flashBackup] = useFlash()
+  const [walletBusy, setWalletBusy] = useState(false)
   useEffect(() => {
     let live = true
     QRCode.toDataURL(pending.address, { margin: 0, width: 560, errorCorrectionLevel: 'M' })
@@ -721,8 +723,9 @@ function DepositView({
           )}
         </div>
         {!DEMO && !unsaved && <p className="invoice-note">{t('deposit.backupHint')}</p>}
+        {!DEMO && <SyriusFunding key={pending.address} address={pending.address} amount={pending.amount} token={pending.token} onBusy={setWalletBusy} />}
         <p className="invoice-note">{t(DEMO ? 'demo.hint' : 'deposit.hint')}</p>
-        <button type="button" className="btn btn--text" onClick={onCancel}>
+        <button type="button" className="btn btn--text" data-testid="deposit-cancel" disabled={walletBusy} onClick={onCancel}>
           {t('deposit.cancel')}
         </button>
       </div>

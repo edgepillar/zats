@@ -5,6 +5,8 @@ import { SweepError, parseAddress, sweep, type SweepResult, type SweepStep } fro
 import { Loading } from './Buddies'
 import { DEMO, demoAddress } from '../demo'
 import { recordClaimTransactions } from '../wallet'
+import { syriusError, SyriusError, validateSyriusSession, type SyriusSession } from '../syrius'
+import { useSyrius } from '../useSyrius'
 
 /**
  * A z1… address field that moves everything in a photo's account there. Used to claim a photo on
@@ -27,7 +29,19 @@ export function SweepForm({
   const [error, setError] = useState<string | null>(null)
   const [shake, setShake] = useState(0)
   const row = useRef<HTMLDivElement>(null)
+  const submitting = useRef(false)
+  const wallet = useSyrius()
+  const [walletRecipient, setWalletRecipient] = useState<SyriusSession | null>(null)
+  const [choosingWallet, setChoosingWallet] = useState(false)
   const inputId = `${id}-input`
+
+  useEffect(() => {
+    if (walletRecipient && !walletRecipient.current() && !submitting.current) {
+      setAddress('')
+      setWalletRecipient(null)
+      setError(t('syrius.changed'))
+    }
+  }, [wallet.revision, walletRecipient, t])
 
   useEffect(() => {
     if (!shake || prefersReducedMotion()) return
@@ -45,13 +59,8 @@ export function SweepForm({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (step) return
-    const to = await parseAddress(address).catch(() => null)
-    if (!to) {
-      setError(t('sweep.err.invalid'))
-      setShake((n) => n + 1)
-      return
-    }
+    if (submitting.current || choosingWallet) return
+    submitting.current = true
     setError(null)
     setStep({ k: 'connecting' })
     onBusy?.(true)
@@ -60,17 +69,24 @@ export function SweepForm({
       .then(() => navigator.wakeLock?.request('screen'))
       .catch(() => null)
     try {
+      const to = await parseAddress(address).catch(() => null)
+      if (!to) throw new SweepError('invalid')
+      if (walletRecipient) {
+        await validateSyriusSession(walletRecipient)
+        if (walletRecipient.address !== to) throw new SyriusError('changed')
+      }
       const result = await sweep(token, to, setStep)
       let historySaved = false
       try { historySaved = recordClaimTransactions(token, result.hashes) } catch { /* Transfer already sent. */ }
       onDone({ ...result, historySaved })
     } catch (err) {
-      const code = err instanceof SweepError ? err.code : 'failed'
-      setError(t(`sweep.err.${code}`))
+      if (walletRecipient && !(err instanceof SweepError)) setError(t(`syrius.err.${syriusError(err).code}`))
+      else setError(t(`sweep.err.${err instanceof SweepError ? err.code : 'failed'}`))
       setShake((n) => n + 1)
     } finally {
       void lock?.release().catch(() => {})
       setStep(null)
+      submitting.current = false
       onBusy?.(false)
     }
   }
@@ -109,16 +125,26 @@ export function SweepForm({
           aria-invalid={error ? true : undefined}
           onChange={(e) => {
             setAddress(e.target.value)
+            setWalletRecipient(null)
             setError(null)
           }}
         />
-        <button type="submit" className="money-ln-send" disabled={!address.trim()}>
+        <button type="submit" className="money-ln-send" disabled={!address.trim() || choosingWallet}>
           {t('sweep.send')}
         </button>
       </div>
       <p className={`money-ln-status${error ? ' is-error' : ''}`} role="status">
         {error ?? ''}
       </p>
+      {!DEMO && wallet.available && <button type="button" className="btn btn--text btn--sm" data-testid="syrius-recipient" disabled={choosingWallet} onClick={async () => {
+        setChoosingWallet(true); setError(null)
+        try {
+          const selected = await wallet.connect()
+          setAddress(selected.address)
+          setWalletRecipient(selected)
+        } catch (e) { setError(t(`syrius.err.${syriusError(e).code}`)) }
+        finally { setChoosingWallet(false) }
+      }}>{t(choosingWallet ? 'syrius.connecting' : 'syrius.recipient')}</button>}
       {DEMO && !address && (
         <button
           type="button"

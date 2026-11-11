@@ -99,6 +99,32 @@ a thirty-second backoff while open. This bounded view is not a complete chain ar
 link is not a claim of final recipient settlement. Receipt storage errors do not turn an
 already sent transfer into a failed claim; its live result still exposes the returned links.
 
+The mainnet build detects the modern Syrius `window.zenon` provider, including late injection.
+Detection makes no wallet calls. Hide offers an explicit connection, mainnet/account preview and
+offline-backup acknowledgement before a separate **Pay with Syrius** button requests a wallet
+confirmation. The request contains only the photo address, native ZNN token standard and integer
+base-unit amount. The destination must match the photo recovery key, and a read-only preflight
+refuses an account that already has activity. Wallet keys and private node URLs are never requested.
+
+Wallet funding requires Web Locks and working localStorage. An exclusive per-address lock serializes
+tabs; a separate durable `zats.syrius.funding.<address>` marker is written before calling the wallet.
+Pending, submitted and uncertain requests remain blocked across reloads, including after History
+row deletion. Only an explicit wallet refusal (`4001`) clears the marker for another user-initiated
+attempt. A lost response, closed popup or locked wallet does not prove a transfer failed. No automatic
+retry or marker reset is provided; inspect the wallet and ledger before any manual recovery.
+Returned hashes join History without turning receipt-storage failure into transfer failure.
+
+Redeem and History's take-back form can fill the recipient from Syrius. The account and mainnet are
+read again before claiming. Account, chain and node events invalidate old selections, even if the
+wallet later switches back. Manual address entry remains available. The photo account still signs
+its own claim in Zats; connecting a recipient wallet does not give that wallet the photo key or
+trigger its receive. A claim already started retains its original destination. Recipient receive
+and final settlement must be checked separately. The demo never reads or calls an injected wallet.
+
+The adapter follows the [pinned Syrius provider API](https://github.com/sol-znn/syrius-extension/blob/1db739cb4c566d4001e8dffd2f1fd7e38ce68ef6/docs/INTEGRATION.md).
+Mock-provider controls establish application behavior, not compatibility with an installed extension
+or real mainnet settlement; those require a separately approved test of the deployed revision.
+
 Opening a valid Zats account on Redeem also saves its key and exact incoming PNG before reading
 the node. Test payloads and invalid images are excluded. The account address deduplicates rows;
 reopening it keeps its first timestamp and does not replace an existing PNG. Imports use an

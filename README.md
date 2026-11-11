@@ -56,6 +56,13 @@ How it works in detail, why it is built this way, what has been checked and what
   ledger. Hidden isn't encrypted either: anyone who knows the format can read the secret, so treat
   the photo like cash.
 
+With a compatible Syrius browser extension, Hide offers **Connect Syrius** and **Pay with Syrius**
+after an offline recovery-backup acknowledgement. Redeem can fill the recipient with **Use Syrius
+address**. Both verify mainnet and the selected account. Wallet funding uses a durable request
+guard and Web Locks to prevent duplicate requests across tabs and reloads. Uncertain outcomes
+require checking the wallet and ledger before any further transfer. Manual address entry remains
+available; the demo never calls a real wallet. See the [integration boundaries](docs/architecture.md).
+
 ### Hidden-data format
 
 Unchanged from Kakaonut except for the marker and the payload:

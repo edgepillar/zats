@@ -84,6 +84,11 @@ displayed photo account. Approval to create the website does not cover this tran
 
 After approval, the owner confirms that transfer in the sender wallet. Record its transaction
 hash privately. Keep profile A open while the app detects the deposit and embeds the secret.
+With a compatible Syrius extension, first use **Connect Syrius**, verify mainnet, the complete
+source and photo addresses, and acknowledge the offline backup. Only after Approval A, select
+**Pay with Syrius** and confirm the exact 0.1 ZNN in the wallet. Connection alone transfers nothing.
+Do not also fund manually. If a wallet request remains pending or its result is unknown, inspect
+Syrius and account history; refreshing does not authorize another transfer.
 The app embeds whatever arrives; verify the finished photo shows **10,000,000 zats / 0.1 ZNN**.
 If it differs, stop and investigate without sending more.
 
@@ -103,6 +108,10 @@ them in another wallet while the browser is claiming.
 
 Select **Claim to my Zenon address**, enter the previously checked recipient address, and compare
 the full address with the receiving wallet again. Do not select the final **Claim** yet.
+Alternatively, **Use Syrius address** connects the recipient account and fills this field. Verify
+the full address and mainnet; account or network changes require selection again. This selects
+only the recipient: Zats still signs with the photo account, and the recipient wallet's receive
+remains part of the separate Approval B below.
 
 ## 5. Approval B: claim and receive
 
