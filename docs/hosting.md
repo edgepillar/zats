@@ -1,4 +1,10 @@
-# GitHub Pages
+# Static hosting
+
+For Vercel and the proposed `zats.edgepillar.com` production origin, use the
+[Vercel deployment guide](vercel.md). Both hosts use the same combined `dist/` output.
+GitHub Pages publication remains a separate, manually triggered option.
+
+## GitHub Pages
 
 The repository is private. A Pages deployment publishes the generated website publicly;
 repository privacy does not make the website private. Private-repository Pages also requires

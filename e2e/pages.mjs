@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 
 const root = fileURLToPath(new URL('../dist/', import.meta.url))
-const prefix = '/zats/'
+const prefix = process.env.ZATS_TEST_PREFIX ?? '/zats/'
+if (!prefix.startsWith('/') || !prefix.endsWith('/')) throw new Error('The test prefix must start and end with /.')
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff': 'font/woff', '.woff2': 'font/woff2' }
 const server = createServer(async (req, res) => {
   try {
@@ -23,7 +24,7 @@ const server = createServer(async (req, res) => {
   }
 })
 await new Promise((ready, reject) => { server.once('error', reject); server.listen(4317, '127.0.0.1', ready) })
-const base = 'http://127.0.0.1:4317/zats/'
+const base = 'http://127.0.0.1:4317' + prefix
 try {
   for (const [script, extra] of [['flow.mjs', {}], ['demo-flow.mjs', {}], ['demo-flow.mjs', { NO_STORAGE: '1' }]]) {
     const code = await new Promise((done, reject) => {

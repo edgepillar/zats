@@ -7,3 +7,4 @@ playwright-report
 public/pow
 test-results
 dist-demo
+.vercel

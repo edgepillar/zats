@@ -12,11 +12,15 @@ screenshots, repositories and shared folders. Use a non-personal sample photo.
 ## 1. Prepare without moving money
 
 1. Confirm the exact `main` commit has passing unit tests, both builds and simulated browser
-   tests. Confirm its Pages deployment succeeded and note the deployed revision privately.
-2. Rehearse the complete flow at `/zats/demo/` using the pretend-wallet button. Never send real
-   ZNN to a demo address. Close that tab before the real test.
+   tests. Confirm the selected host's deployment succeeded and note its revision privately. Use
+   the final HTTPS production domain before funding; a preview-to-custom-domain change does not
+   migrate browser History. See the [Vercel deployment guide](vercel.md).
+2. Rehearse the complete flow at the production site's `/demo/` route (`/zats/demo/` on GitHub
+   Pages) using the pretend-wallet button. Never send real ZNN to a demo address. Close that tab
+   before the real test.
 3. Use two separate browser profiles or devices: profile A makes the photo; profile B opens it.
-   Both must use the deployed **mainnet** URL ending `/zats/`, with no demo banner. Enable local
+   Both must use the deployed **mainnet** base URL (`/` on Vercel, `/zats/` on GitHub Pages), with
+   no demo banner. Enable local
    storage in profile A and keep it available until the test and recovery checks are complete.
 4. Prepare an existing synced sender wallet and a distinct recipient address you control. Check
    the recipient address in its wallet, not just the clipboard. Use native Zenon mainnet, not a

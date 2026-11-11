@@ -111,6 +111,10 @@ build. Never fund a demo address or open a funded photo in the demo.
 
 ## Hosting
 
+Vercel can serve the combined build at `/` and `/demo/` while this repository stays private.
+See the [Vercel and custom-domain guide](docs/vercel.md). Select the final production origin
+before funding: browser History does not migrate automatically between domains.
+
 The [Pages workflow](.github/workflows/pages.yml) tests and builds both sites on pushes. Publishing
 is a separate manual action because a Pages website is publicly accessible even when its source
 repository is private. See [hosting instructions](docs/hosting.md). No deployment or simulated test
