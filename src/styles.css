@@ -3304,3 +3304,616 @@ select,
   line-height: 1.4;
   text-align: center;
 }
+
+/* =====================================================================================
+   Zats theme: frosted glass over a pixel-art world.
+   The page floats on a live isometric scene (src/scene). Surfaces are dark, green-tinted glass
+   with a soft blur; text is warm off-white; the one bright colour is a cream for primary actions.
+   Everything above stays in charge of layout; this layer only changes how things look.
+   ===================================================================================== */
+:root {
+  color-scheme: dark;
+
+  --yellow: #efe4c6;
+  --yellow-press: #e2d3ac;
+  --yellow-soft: rgba(239, 228, 198, 0.12);
+  --brown: #18221a;
+  --chat: rgba(10, 18, 13, 0.55);
+  --nut: #d9b26a;
+
+  --bg: #0d140f;
+  --bg-2: rgba(255, 255, 255, 0.04);
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --fill: rgba(255, 255, 255, 0.07);
+  --fill-hover: rgba(255, 255, 255, 0.12);
+  --fill-off: rgba(255, 255, 255, 0.05);
+  --ink-off: rgba(241, 238, 228, 0.35);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --grey-page: transparent;
+  --secondary: rgba(241, 238, 228, 0.64);
+  --tertiary: rgba(241, 238, 228, 0.64);
+  --ink: #f1eee4;
+  --ink-2: rgba(241, 238, 228, 0.74);
+  --ink-3: rgba(241, 238, 228, 0.58);
+
+  --good: #9ad7a8;
+  --good-bg: rgba(120, 200, 140, 0.14);
+  --warn: #f0c27a;
+  --warn-bg: rgba(240, 194, 122, 0.12);
+  --bad: #ffa596;
+  --bad-bg: rgba(255, 120, 100, 0.13);
+
+  --panel: rgba(255, 255, 255, 0.055);
+  --panel-2: rgba(255, 255, 255, 0.085);
+
+  --r: 12px;
+  --r-sm: 9px;
+  --r-xs: 5px;
+
+  --glass: rgba(16, 26, 19, 0.6);
+  --glass-strong: rgba(12, 20, 15, 0.74);
+  --glass-line: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(18px) saturate(1.25);
+  --glass-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.6);
+  --glass-r: 18px;
+}
+
+body {
+  background: var(--bg);
+}
+
+/* The world behind everything. */
+.scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.app > :not(.scene) {
+  position: relative;
+  z-index: 1;
+}
+.app > .sky {
+  position: fixed;
+  z-index: 40;
+}
+
+/* Glass: the page's big surfaces. */
+.top,
+.hero-copy,
+.make,
+.how,
+.foot,
+.page--chat > *,
+.sky-dock,
+.sky-panel {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--glass-shadow);
+}
+
+.top {
+  border-width: 0 0 1px;
+  box-shadow: none;
+  background: rgba(12, 20, 15, 0.55);
+}
+.demo-banner {
+  background: rgba(239, 228, 198, 0.92);
+  color: #18221a;
+}
+
+.hero-copy {
+  padding: 32px 30px 30px;
+  border-radius: var(--glass-r);
+}
+.hero-title {
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-size: clamp(34px, 6vw, 56px);
+}
+.hero-sub {
+  font-size: 16px;
+}
+
+.make {
+  max-width: 1120px;
+  margin: 24px auto 64px;
+  padding: 36px 30px;
+  border-radius: var(--glass-r);
+}
+@media (max-width: 720px) {
+  .make {
+    margin: 12px 10px 48px;
+    padding: 24px 16px;
+  }
+}
+.make-head h2 {
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  font-size: clamp(26px, 5vw, 34px);
+}
+@media (min-width: 720px) {
+  .make-grid > .make-head h2 {
+    font-size: clamp(26px, 2.8vw, 34px);
+  }
+}
+
+.how {
+  margin: 24px auto 64px;
+  padding: 36px 30px;
+  border-radius: var(--glass-r);
+}
+.foot {
+  margin: 0 12px 12px;
+  border-radius: var(--glass-r);
+  /* room for the sky dock under the footer text on phones */
+  padding-bottom: 72px;
+}
+
+/* Inner surfaces: lighter glass on glass. */
+.tile,
+.group,
+.saved-summary,
+.picker,
+.preset,
+.select select,
+.money-ln-input,
+.redeem-shot,
+.raw-token textarea {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.picker {
+  border-style: dashed;
+  border-color: var(--line-2);
+}
+.picker--has {
+  border-style: solid;
+}
+.preset[aria-pressed='true'] {
+  background: var(--yellow);
+  color: var(--brown);
+  border-color: transparent;
+}
+.select select option {
+  background: #18221a;
+  color: var(--ink);
+}
+
+/* Buttons: cream for the main action, glass for the rest. */
+.btn {
+  border-radius: 12px;
+  font-weight: 600;
+}
+.btn--primary {
+  background: var(--yellow);
+  color: var(--brown);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 8px 22px -12px rgba(239, 228, 198, 0.55);
+}
+.btn--primary:disabled {
+  background: rgba(239, 228, 198, 0.25);
+  color: rgba(24, 34, 26, 0.7);
+  box-shadow: none;
+}
+.btn--quiet,
+.btn--soft,
+.btn--white,
+.btn--line {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn--ink {
+  background: var(--yellow);
+  color: var(--brown);
+}
+.btn--text {
+  color: var(--ink-2);
+}
+
+/* Top bar */
+.modes {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.modes a {
+  color: var(--ink-2);
+  border-radius: 9px;
+}
+.modes a[aria-current] {
+  background: var(--yellow);
+  color: var(--brown);
+}
+
+/* The pixel Z */
+.logo-mark {
+  background: var(--yellow);
+  color: var(--brown);
+  border-radius: 24%;
+  padding: 0;
+}
+.logo-mark svg {
+  display: block;
+  fill: currentColor;
+}
+
+/* The money message: a warm lantern-lit card. */
+.money {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.money-top {
+  background: linear-gradient(160deg, rgba(240, 200, 120, 0.28), rgba(240, 200, 120, 0.1));
+  color: var(--ink);
+}
+.money-main,
+.money-main .token-num {
+  color: #f6dfa4;
+}
+.money-sub,
+.money-unit {
+  color: var(--ink-2);
+}
+.money-bottom {
+  background: transparent;
+  border-top: 1px solid var(--line);
+}
+.money-row,
+.money-cta,
+.money-split button,
+.money-split a {
+  color: var(--ink);
+  background: transparent;
+}
+.money-split {
+  border-top: 1px solid var(--line);
+}
+.money-split > * + * {
+  border-left: 1px solid var(--line);
+}
+.money-ln-send {
+  background: var(--yellow);
+  color: var(--brown);
+}
+.money-ln-input::placeholder {
+  color: var(--ink-off);
+}
+
+/* Deposit card */
+.invoice {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.qr {
+  background: #f1eee4;
+  border-radius: 14px;
+  padding: 14px;
+}
+.done-badge {
+  background: rgba(12, 20, 15, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #f6dfa4;
+}
+.status {
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+/* The hero phone: a dark glass handset. */
+.phone {
+  background: rgba(8, 12, 9, 0.85);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 40px 80px -30px rgba(0, 0, 0, 0.8);
+}
+.phone-screen {
+  background: rgba(16, 26, 19, 0.92);
+}
+.kt-room {
+  background: transparent;
+}
+.kt-bubble--them {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+.kt-bubble--me {
+  background: var(--yellow);
+  color: var(--brown);
+}
+.kt-input,
+.kt-head,
+.kt-status {
+  background: rgba(10, 16, 12, 0.6);
+  color: var(--ink);
+}
+.kt-field {
+  background: rgba(255, 255, 255, 0.08);
+}
+.kt-date {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-2);
+}
+
+/* How page */
+.how-tabs,
+.how-tab,
+.how-step,
+.how-sec,
+.how-good,
+.how-visual {
+  border-color: var(--line);
+}
+.frame-cell,
+.how-frame > * {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Footer: cream wordmark */
+.foot-arc text {
+  fill: var(--yellow);
+}
+
+/* ---------- Sky: the dock and its panel ---------- */
+.sky {
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.sky-dock {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+}
+.sky-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.sky-btn:hover,
+.sky-btn[aria-expanded='true'],
+.sky-btn[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.12);
+}
+.pixel-icon {
+  fill: currentColor;
+}
+.sky-panel {
+  width: min(420px, calc(100vw - 24px));
+  padding: 16px 16px 12px;
+  border-radius: 18px;
+  color: var(--ink);
+  animation: sky-in 0.25s var(--ease-out);
+}
+@keyframes sky-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+.sky-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sky-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sky-x {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 22px;
+  line-height: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sky-x:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+.sky-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.sky-col {
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sky-col + .sky-col {
+  border-left: 1px solid var(--line);
+}
+.sky-label {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.sky-orb {
+  display: grid;
+  place-items: center;
+  height: 64px;
+  color: #f6dfa4;
+}
+.sky-pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sky-pick button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sky-pick button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+.sky-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.switch {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f1eee4;
+  transition: transform 0.2s var(--ease-out);
+}
+.switch[aria-checked='true'] {
+  background: rgba(154, 215, 168, 0.75);
+}
+.switch[aria-checked='true'] span {
+  transform: translateX(14px);
+}
+.sky-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* Look around: the page fades away, leaving the world and the dock. */
+.scene-only .app > :not(.sky):not(.scene) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease-out);
+}
+.app > * {
+  transition: opacity 0.5s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-panel {
+    animation: none;
+  }
+}
+
+/* ---------- Theme fixes, round two ---------- */
+/* Pages let the world show through. */
+.page--how,
+.page--chat,
+.page--make {
+  background: transparent;
+}
+/* Segmented control (How page tabs) */
+.seg {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line);
+}
+.seg button[aria-pressed='true'],
+.seg button[aria-selected='true'] {
+  background: var(--yellow);
+  color: var(--brown);
+}
+/* The phone's chat: the photo card reads as a cream receipt; send is cream too. */
+.kt-photo-foot {
+  background: var(--yellow);
+}
+.kt-foot-label,
+.kt-foot-sub {
+  color: rgba(24, 34, 26, 0.7);
+}
+.kt-foot-main {
+  color: var(--brown);
+}
+.kt-send {
+  background: var(--yellow);
+  color: var(--brown);
+}
+.kt-input {
+  border-top: 1px solid var(--line);
+}
+.kt-sending {
+  border-top-color: var(--yellow);
+}
+/* Sky dock: bottom right, out of the reading column. */
+.app > .sky {
+  left: auto;
+  right: 16px;
+  bottom: 16px;
+  transform: none;
+  align-items: flex-end;
+}
+.foot {
+  padding-bottom: 32px;
+}
+@media (max-width: 640px) {
+  .app > .sky {
+    right: 10px;
+    bottom: 10px;
+  }
+  .foot {
+    padding-bottom: 72px;
+  }
+}
+
+/* ---------- Theme fixes, round three ---------- */
+.redeem-shot {
+  background: transparent;
+  border: 0;
+}
+.foot-accent {
+  color: #f0c27a;
+}
+/* Leave room under the footer for the sky dock. */
+.foot {
+  margin-bottom: 68px;
+}
+.money-top {
+  background: linear-gradient(160deg, rgba(246, 214, 140, 0.24), rgba(246, 214, 140, 0.06));
+}
