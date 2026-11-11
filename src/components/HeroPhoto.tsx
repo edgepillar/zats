@@ -4,8 +4,10 @@ import photo2x from '../assets/hero-photo-2x.webp'
 import photo3x from '../assets/hero-photo-3x.webp'
 
 /**
- * The photo sent in the hero chat: an autumn afternoon at a Seoul palace, the city behind the roof.
- * Plus the same photo as coarse pixels, which the hero shows where light passes over it.
+ * The photo sent in the hero chat: an evening on Zats' planet, the dome, the glowing pool and a
+ * saucer beaming down. Rendered from the same code as the backdrop (src/scene), at 178 × 133 art
+ * pixels and scaled up 2× and 3× without smoothing. Plus the same photo as coarse pixels, which the
+ * hero shows where light passes over it.
  */
 
 const SRC_SET = `${photo1x} 1x, ${photo2x} 2x, ${photo3x} 3x`
@@ -21,7 +23,7 @@ export function HeroPhoto({ ref }: { ref?: RefObject<HTMLImageElement | null> })
   return <img ref={ref} className="hero-photo" src={photo2x} srcSet={SRC_SET} alt="" decoding="async" />
 }
 
-// The pixel view: the photo at 24 × 18, a hairline grid, and a few pixels in KakaoTalk yellow.
+// The pixel view: the photo at 24 × 18, a hairline grid, and a few pixels in the accent lime.
 const COLS = 24
 const ROWS = 18
 const LIT: [number, number][] = [
@@ -62,7 +64,7 @@ export function HeroPixels({ source }: { source: RefObject<HTMLImageElement | nu
 
         const x = (c: number) => Math.round((c * w) / COLS)
         const y = (r: number) => Math.round((r * h) / ROWS)
-        ctx.fillStyle = '#fee500'
+        ctx.fillStyle = '#c9f26b'
         for (const [c, r] of LIT) ctx.fillRect(x(c), y(r), x(c + 1) - x(c), y(r + 1) - y(r))
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.32)'

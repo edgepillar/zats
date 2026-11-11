@@ -1,66 +1,121 @@
 import type { CSSProperties } from 'react'
 
 /**
- * Kakaonut's own little cast, used as the loader: a sat coin, a photo and a lightning bolt, the
- * three things the app is about. Original drawings: flat colour, ink outline, dot eyes. They hop
- * one after another while something is loading (and stand still with reduced motion).
+ * Zats' little cast, used as the loader and in illustrations: an alien, a photo of its planet and
+ * the saucer that carries it, the three things the app is about. Pixel art, 16 × 16, drawn as
+ * squares so they stay crisp at any size. They hop one after another while something is loading
+ * (and stand still with reduced motion).
  */
 
-const INK = '#191919'
-const LINE = 2.6
+type Drawing = { pal: Record<string, string>; rows: string[] }
 
-function Coin({ still = false }: { still?: boolean }) {
+const ART: Record<'alien' | 'photo' | 'ufo', Drawing> = {
+  alien: {
+    pal: { o: '#173a1c', g: '#7ed957', G: '#b8f08a', d: '#3f8a35', y: '#e8ff9e', E: '#120e1f', w: '#ffffff', m: '#2f6b2a' },
+    rows: [
+    '..y..........y..',
+    '...d........d...',
+    '....d......d....',
+    '.....oooooo.....',
+    '...ooggggggoo...',
+    '..oggGGgggggggo.',
+    '.ogGGgggggggggo.',
+    '.ogEEEggggEEEgo.',
+    '.ogEwEggggEwEgo.',
+    '.ogEEEggggEEEgo.',
+    '.oggggggggggggo.',
+    '..oggggggggggo..',
+    '...ogggmmgggo...',
+    '....oggggggo....',
+    '.....oooooo.....',
+    '................',
+    ],
+  },
+  photo: {
+    pal: { w: '#f0ecff', W: '#c8c0e8', p: '#2e244b', P: '#3a2d5c', '*': '#ffffff', L: '#c9f26b', l: '#8fbf3a', t: '#2f8a78', T: '#1f665d', E: '#120e1f', m: '#5a478e', o: '#1a1430' },
+    rows: [
+    'oooooooooooooooo',
+    'owwwwwwwwwwwwwwo',
+    'owpPpp*ppppPpWwo',
+    'owpppppppLLppWwo',
+    'owpp*pppLLLLpWwo',
+    'owppppppLLLlpWwo',
+    'owpppppppllppWwo',
+    'owtttppppppttWwo',
+    'owTTttttttttTWwo',
+    'owwwwwwwwwwwwwwo',
+    'owwwwwwwwwwwwwwo',
+    'owwwEwwwwwwEwwwo',
+    'owwwwwmmmmwwwwwo',
+    'owwwwwwwwwwwwwwo',
+    'oooooooooooooooo',
+    '................',
+    ],
+  },
+  ufo: {
+    pal: { o: '#1a1430', c: '#9ff3ff', C: '#5cc8da', w: '#ffffff', s: '#d8dbe8', S: '#8a90a8', r: '#ff8ad8', l: '#c9f26b', b: '#7ef9ff', E: '#120e1f' },
+    rows: [
+    '................',
+    '......oooo......',
+    '.....owcccco....',
+    '....owcEccEco...',
+    '....occccccCo...',
+    '..oooooooooooo..',
+    '.ossssssssssssso',
+    'osrssllsslssrsSo',
+    '.oSSSSSSSSSSSSo.',
+    '..oooooooooooo..',
+    '....o.o..o.o....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    ],
+  },
+}
+
+/** One drawing as SVG rects, joining runs of the same colour on a row. */
+function Pixels({ art, still }: { art: Drawing; still?: boolean }) {
+  const rects: { x: number; y: number; w: number; c: string }[] = []
+  art.rows.forEach((row, y) => {
+    let x = 0
+    while (x < row.length) {
+      const ch = row[x]
+      let end = x + 1
+      while (end < row.length && row[end] === ch) end++
+      if (ch !== '.') rects.push({ x, y, w: end - x, c: art.pal[ch] })
+      x = end
+    }
+  })
   return (
-    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <circle cx="20" cy="21" r="15" fill="#F7931A" stroke={INK} strokeWidth={LINE} />
-      <circle cx="20" cy="21" r="11.2" fill="none" stroke="#D9760C" strokeWidth="1.6" />
-      <path d="M10.2 17.4a10.6 10.6 0 0 1 5.6-6.4" stroke="#FFD08A" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-      <circle cx="15.6" cy="20.5" r="1.9" fill={INK} />
-      <circle cx="24.4" cy="20.5" r="1.9" fill={INK} />
-      <path d="M17.2 25.2q2.8 2.4 5.6 0" stroke={INK} strokeWidth="2" strokeLinecap="round" fill="none" />
+    <svg
+      className={still ? 'buddy buddy--still' : 'buddy'}
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {rects.map((r) => (
+        <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height={1} fill={r.c} />
+      ))}
     </svg>
   )
 }
 
-function Photo({ still = false }: { still?: boolean }) {
-  return (
-    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <rect x="7.5" y="5.5" width="25" height="30" rx="4" fill="#fff" stroke={INK} strokeWidth={LINE} />
-      <rect x="11.5" y="9.5" width="17" height="13" rx="1.5" fill="#BACEE0" />
-      <path d="M11.5 22.5 17 16.8l3.6 3.6 2.6-2.4 5.3 4.5z" fill="#7FA6C8" />
-      <circle cx="24.6" cy="13.2" r="1.9" fill="#FEE500" />
-      <circle cx="16.4" cy="27.4" r="1.7" fill={INK} />
-      <circle cx="23.6" cy="27.4" r="1.7" fill={INK} />
-      <path d="M18.3 30.6q1.7 1.4 3.4 0" stroke={INK} strokeWidth="1.8" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
+const Alien = ({ still = false }: { still?: boolean }) => <Pixels art={ART.alien} still={still} />
+const Photo = ({ still = false }: { still?: boolean }) => <Pixels art={ART.photo} still={still} />
+const Ufo = ({ still = false }: { still?: boolean }) => <Pixels art={ART.ufo} still={still} />
 
-function Bolt({ still = false }: { still?: boolean }) {
-  return (
-    <svg className={still ? 'buddy buddy--still' : 'buddy'} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <path
-        d="M25.5 3 7 23.5h10.5L14.5 37.5 33.5 14H23.5z"
-        fill="#FEE500"
-        stroke={INK}
-        strokeWidth={LINE}
-        strokeLinejoin="round"
-      />
-      <circle cx="16.9" cy="17.6" r="1.7" fill={INK} />
-      <circle cx="23.3" cy="17.6" r="1.7" fill={INK} />
-      <path d="M18.6 20.8q1.5 1.3 3 0" stroke={INK} strokeWidth="1.8" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
-
-const CAST = { coin: Coin, photo: Photo, bolt: Bolt }
+/** Kinds keep their old names: "coin" is the alien, "bolt" the saucer. */
+const CAST = { coin: Alien, photo: Photo, bolt: Ufo }
 
 /** One character, standing still (for illustrations). */
 export function Character({ kind, size = 56 }: { kind: keyof typeof CAST; size?: number }) {
-  const Drawing = CAST[kind]
+  const Draw = CAST[kind]
   return (
     <span className="character" style={{ width: size, height: size }} aria-hidden="true">
-      <Drawing still />
+      <Draw still />
     </span>
   )
 }
@@ -69,9 +124,9 @@ export function Character({ kind, size = 56 }: { kind: keyof typeof CAST; size?:
 export function Buddies({ size = 28, className = '' }: { size?: number; className?: string }) {
   return (
     <span className={`buddies ${className}`} style={{ '--buddy': `${size}px` } as CSSProperties} aria-hidden="true">
-      <Coin />
+      <Alien />
       <Photo />
-      <Bolt />
+      <Ufo />
     </span>
   )
 }

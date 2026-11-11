@@ -81,6 +81,17 @@ npm run e2e        # full make → fund → open → claim flow against a preten
 Nodes: the public mainnet nodes from [blog.zenon.info/public-nodes](https://blog.zenon.info/public-nodes/),
 tried in order. Override with `VITE_ZNN_NODES=wss://a:35998,wss://b:35998`.
 
+## Design
+
+The site floats on a small alien planet drawn live by code (`src/scene/scene.ts`): violet moss,
+mushroom trees, crystals, a glowing pool, a dome habitat and a saucer that drops by now and then,
+in isometric pixel art with a day/night cycle and weather (clear, mist, meteors). Panels are
+frosted violet glass with a lime accent. The cast (an alien, a photo of its planet, the saucer) and
+the logo are 16 × 16 and 7 × 7 pixel drawings; the hero photo is rendered by the scene code.
+
+Type is pixel type, all SIL Open Font License: Tiny5 (headings, buttons, numbers), DotGothic16
+(reading), Silkscreen (small caps) and VT323 (addresses), Latin subsets only.
+
 ## Demo build
 
 `npm run build:demo` builds a version that needs no ZNN and no network (`dist-demo/`): a pretend

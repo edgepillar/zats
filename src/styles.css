@@ -1223,7 +1223,7 @@ p + p {
 .deposit-address {
   margin: -6px auto 14px;
   max-width: 300px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink-2);
@@ -2136,7 +2136,7 @@ p + p {
   height: var(--bit);
   border-radius: 2px;
   background: var(--surface);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   font-size: 12.5px;
   font-weight: 600;
   overflow: hidden;
@@ -2197,7 +2197,7 @@ p + p {
   opacity: 1;
 }
 .px-token code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   color: var(--ink);
 }
 .px-token mark {
@@ -2209,7 +2209,7 @@ p + p {
 .px-token-bits {
   display: inline-flex;
   gap: 2px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
 }
 .px-token-bits span {
   padding: 1px 3px;
@@ -2286,7 +2286,7 @@ p + p {
   text-align: center;
 }
 .frame-cell code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
@@ -3916,4 +3916,258 @@ body {
 }
 .money-top {
   background: linear-gradient(160deg, rgba(246, 214, 140, 0.24), rgba(246, 214, 140, 0.06));
+}
+
+/* =====================================================================================
+   Round four: an alien planet and pixel type.
+   Violet glass over the planet, a soft neon lime for actions, lavender-white text. Pixelify Sans
+   for reading, Silkscreen for the wordmark and small caps, VT323 where characters must line up.
+   Pixel faces are never tightened: negative tracking makes their squares collide.
+   ===================================================================================== */
+:root {
+  --font: 'Pixelify Sans', ui-sans-serif, system-ui, sans-serif;
+  --brand-font: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
+  --mono: 'VT323', ui-monospace, monospace;
+
+  --yellow: #c9f26b;
+  --yellow-press: #b6e054;
+  --yellow-soft: rgba(201, 242, 107, 0.12);
+  --brown: #140f22;
+
+  --bg: #0b0817;
+  --ink: #f0ecff;
+  --ink-2: rgba(240, 236, 255, 0.76);
+  --ink-3: rgba(240, 236, 255, 0.6);
+  --ink-off: rgba(240, 236, 255, 0.36);
+  --secondary: rgba(240, 236, 255, 0.66);
+  --tertiary: rgba(240, 236, 255, 0.66);
+
+  --good: #9ff3d2;
+  --warn: #ffd27a;
+  --bad: #ff9fb5;
+
+  --glass: rgba(22, 15, 42, 0.62);
+  --glass-strong: rgba(15, 10, 30, 0.78);
+  --glass-line: rgba(200, 185, 255, 0.12);
+  --glass-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7);
+}
+
+body {
+  font-feature-settings: normal;
+}
+h1,
+h2,
+h3,
+.hero-title,
+.make-head h2,
+.how-head h1,
+.amount,
+.amount input,
+.amount-sizer,
+.money-main,
+.invoice-amount,
+.done-title,
+.saved-main strong,
+.kt-foot-main {
+  letter-spacing: 0;
+}
+.hero-title {
+  font-weight: 700;
+  line-height: 1.05;
+}
+.make-head h2,
+.how-head h1 {
+  font-weight: 700;
+}
+.brand-name,
+.foot-col,
+.tile-label,
+.sky-panel-title,
+.sky-label,
+.status {
+  font-family: var(--brand-font);
+  letter-spacing: 0.02em;
+}
+.brand-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+.foot-col {
+  font-size: 13px;
+  line-height: 2;
+}
+.tile-label,
+.sky-label {
+  font-size: 11px;
+}
+
+/* Things that must line up: addresses, the 24 words, the address field. */
+.deposit-address,
+.raw-token textarea,
+.money-ln-input,
+.notice-detail {
+  font-family: var(--mono);
+  font-size: 19px;
+  line-height: 1.25;
+}
+.deposit-address {
+  max-width: 330px;
+}
+
+.top {
+  background: rgba(15, 10, 30, 0.55);
+}
+.demo-banner {
+  background: var(--yellow);
+  color: var(--brown);
+  font-family: var(--brand-font);
+  font-size: 12px;
+}
+
+.money-top {
+  background: linear-gradient(160deg, rgba(126, 249, 255, 0.2), rgba(201, 242, 107, 0.08));
+}
+.money-main,
+.money-main .token-num {
+  color: #dcfa9e;
+}
+.done-badge {
+  color: #dcfa9e;
+  background: rgba(15, 10, 30, 0.72);
+}
+.qr {
+  background: #f0ecff;
+}
+.sky-orb {
+  color: var(--yellow);
+}
+.switch[aria-checked='true'] {
+  background: rgba(126, 249, 255, 0.7);
+}
+.foot-accent {
+  color: #7ef9ff;
+}
+.foot-arc text {
+  fill: var(--yellow);
+  font-family: var(--brand-font);
+}
+.btn--primary {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 8px 22px -12px rgba(201, 242, 107, 0.6);
+}
+.btn--primary:disabled {
+  background: rgba(201, 242, 107, 0.22);
+  color: rgba(20, 15, 34, 0.7);
+}
+.btn--primary:disabled {
+  color: rgba(240, 236, 255, 0.55);
+}
+.phone {
+  background: rgba(8, 6, 16, 0.88);
+}
+.phone-screen {
+  background: rgba(20, 14, 38, 0.94);
+}
+.kt-input,
+.kt-head,
+.kt-status {
+  background: rgba(12, 8, 24, 0.6);
+}
+.kt-avatar {
+  background: rgba(126, 249, 255, 0.14);
+}
+
+/* The pixel cast: crisp squares at any size. */
+.buddy,
+.character svg {
+  shape-rendering: crispEdges;
+}
+/* The hero photo is pixel art too: keep its squares. */
+.hero-photo {
+  image-rendering: pixelated;
+}
+
+/* Round five: Tiny5 for display, DotGothic16 for reading. Both have one weight, so the browser
+   must not fake bold or italic: smeared pixels read worse than plain ones. */
+:root {
+  --font: 'DotGothic16', ui-sans-serif, system-ui, sans-serif;
+  --display: 'Tiny5', 'Silkscreen', ui-monospace, monospace;
+}
+html {
+  font-synthesis: none;
+}
+h1,
+h2,
+h3,
+h4,
+strong,
+b,
+.btn,
+.hero-title,
+.make-head h2,
+.how-head h1,
+.amount,
+.amount input,
+.amount-sizer,
+.amount-unit,
+.money-main,
+.money-cta,
+.money-split button,
+.money-split a,
+.money-ln-send,
+.invoice-amount,
+.invoice-title,
+.done-title,
+.notice-title,
+.preset,
+.modes a,
+.seg button,
+.picker-title,
+.picker-change,
+.saved-title,
+.saved-main strong,
+.sky-pick,
+.kt-foot-main,
+.kt-title,
+.kt-send,
+.redeem-msg h3,
+.done-badge,
+.loading-label {
+  font-family: var(--display);
+  font-weight: 400;
+}
+.hero-title {
+  font-size: clamp(38px, 6.4vw, 64px);
+  line-height: 1.02;
+}
+.make-head h2,
+.how-head h1 {
+  font-size: clamp(28px, 4.6vw, 40px);
+}
+@media (min-width: 720px) {
+  .make-grid > .make-head h2 {
+    font-size: clamp(28px, 3vw, 38px);
+  }
+}
+.btn {
+  font-size: 17px;
+}
+body {
+  font-size: 16px;
+  line-height: 1.6;
+}
+.preset,
+.modes a,
+.seg button {
+  font-size: 15px;
+}
+.how-step h3,
+.how-sec h3 {
+  font-size: 18px;
+}
+.foot {
+  --foot-accent: #7ef9ff;
+}
+button.money-cta {
+  font-family: var(--display);
+  font-size: 16px;
 }

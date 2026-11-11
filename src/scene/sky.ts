@@ -13,14 +13,14 @@ export interface Sky {
 }
 
 export const TIMES: TimeOfDay[] = ['morning', 'day', 'evening', 'night']
-export const WEATHERS: Weather[] = ['clear', 'cloudy', 'rain']
+export const WEATHERS: Weather[] = ['clear', 'mist', 'meteors']
 
 const KEY = 'zats.sky'
 const DRIFT_MS = 3 * 60 * 1000
 
 function nextWeather(): Weather {
   const r = Math.random()
-  return r < 0.6 ? 'clear' : r < 0.85 ? 'cloudy' : 'rain'
+  return r < 0.55 ? 'clear' : r < 0.8 ? 'mist' : 'meteors'
 }
 
 export function useSky() {
