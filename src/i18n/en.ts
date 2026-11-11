@@ -136,6 +136,7 @@ export const en = {
   'deposit.title': 'Send {znn} ZNN to this address',
   'deposit.waiting': 'Waiting for your ZNN…',
   'deposit.copy': 'Copy address',
+  'deposit.backupHint': 'Keep the 24 words offline before sending ZNN. Anyone with them controls this account.',
   'deposit.hint': 'Send from Syrius or any Zenon wallet. The photo holds whatever arrives. This address is saved in History, so nothing sent here is lost.',
   'deposit.cancel': 'Cancel',
   'deposit.offline': 'Can’t reach a Zenon node. Still trying…',

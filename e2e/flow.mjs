@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 // Proof of work and signing are real; only the network is pretend. Needs a local Chrome:
 //   npm run build && npx vite preview --port 4317 &   then   CHROME=/path/to/chrome npm run e2e
 import puppeteer from 'puppeteer-core'
-import { fileURLToPath } from 'node:url'
+import { KeyStore } from 'znn-typescript-sdk'
+import { fileURLToPath, URL as NodeURL } from 'node:url'
 import { dirname, join } from 'node:path'
 const here = dirname(fileURLToPath(import.meta.url))
 const tmp = (name) => join(here, '..', 'test-results', name)
@@ -11,6 +12,7 @@ const fake = readFileSync(join(here, 'fake-node.js'), 'utf8')
 const CHROME = process.env.CHROME ?? '/usr/bin/google-chrome'
 const URL = process.env.ZATS_URL ?? 'http://localhost:4317/'
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] })
+await browser.defaultBrowserContext().overridePermissions(new NodeURL(URL).origin, ['clipboard-read', 'clipboard-write'])
 const page = await browser.newPage()
 const logs = []
 page.on('pageerror', (e) => logs.push('pageerror: ' + e.message))
@@ -32,6 +34,21 @@ await page.click('.pay-group .btn--primary')
 await page.waitForSelector('[data-testid="deposit-address"]', { timeout: 20000 })
 const photoAddr = await page.$eval('[data-testid="deposit-address"]', (e) => e.textContent.trim())
 result.photoAddr = photoAddr
+
+// Back up the unfunded account through the UI. Never log the words, even for this fake node.
+await page.click('[data-testid="deposit-copy-words"]')
+await page.waitForFunction(() => document.querySelector('[data-testid="deposit-copy-words"]')?.textContent.includes('Copied'))
+let backupWords = await page.evaluate(() => navigator.clipboard.readText())
+result.backupWordCount = backupWords.trim().split(/\s+/).length
+try {
+  result.backupControlsDeposit = KeyStore.fromMnemonic(backupWords).getKeyPair(0).getAddress().toString() === photoAddr
+} catch {
+  result.backupControlsDeposit = false
+}
+backupWords = ''
+await page.click('[data-testid="deposit-copy-address"]')
+await page.waitForFunction(() => document.querySelector('[data-testid="deposit-copy-address"]')?.textContent.includes('Copied'))
+result.copiedDepositAddressMatches = await page.evaluate((address) => navigator.clipboard.readText().then((text) => text === address), photoAddr)
 
 // 2. ZNN arrives at the address (plus 2 QSR, to check both tokens move)
 await page.evaluate((a) => { window.__fake.fund(a, 100000000n); window.__fake.fund(a, 200000000n, 'zts1qsrxxxxxxxxxxxxxmrhjll') }, photoAddr)
@@ -107,6 +124,9 @@ result.totalSeconds = Math.round((Date.now() - t0) / 1000)
 console.log(JSON.stringify(result, null, 1))
 await browser.close()
 const ok =
+  result.backupWordCount === 24 &&
+  result.backupControlsDeposit &&
+  result.copiedDepositAddressMatches &&
   result.reopened === 'Already claimed' &&
   result.historyStatus === 'Claimed' &&
   result.chain.errors.length === 0 &&

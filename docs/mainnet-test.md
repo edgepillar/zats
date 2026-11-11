@@ -68,7 +68,12 @@ words, account secrets or funded PNG data into DevTools.
    this address** and shows a fresh `z1…` deposit address.
 3. Confirm a matching row exists in **History**. If the app reports a storage failure, stop this
    pilot before funding. Do not clear storage, delete the History row or abandon this profile.
-4. Compare the complete deposit address with the address prepared in the sender wallet. Do not
+4. Use **Copy 24 words** on this unfunded deposit screen and keep a private offline recovery
+   backup. The operator should do this directly without showing the words to an assistant or
+   including them in a transcript, screenshot, report or repository. Confirm the backup is kept
+   before any funding approval. Clipboard contents alone are not a durable backup.
+5. Use **Copy address** again after taking the backup. Compare the complete deposit address with
+   the address prepared in the sender wallet. Do not
    confirm the wallet transaction yet.
 
 ## 3. Approval A: fund exactly 0.1 ZNN

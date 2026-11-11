@@ -571,6 +571,7 @@ function DepositView({
   const { t, num } = useI18n()
   const [qr, setQr] = useState<string | null>(null)
   const [copied, flash] = useFlash()
+  const [backupCopied, flashBackup] = useFlash()
   useEffect(() => {
     let live = true
     QRCode.toDataURL(pending.address, { margin: 0, width: 560, errorCorrectionLevel: 'M' })
@@ -614,12 +615,27 @@ function DepositView({
           <button
             type="button"
             className={DEMO ? 'btn btn--quiet' : 'btn btn--primary'}
+            data-testid="deposit-copy-address"
             onClick={async () => flash((await copyText(pending.address)) ? t('action.copied') : t('action.copyFailedShort'))}
           >
             {copied === t('action.copied') ? <CheckIcon size={18} className="flash-in" /> : <CopyIcon size={18} />}
             <FlashLabel flash={copied}>{t('deposit.copy')}</FlashLabel>
           </button>
+          {!DEMO && !unsaved && (
+            <button
+              type="button"
+              className="btn btn--quiet"
+              data-testid="deposit-copy-words"
+              onClick={async () => {
+                const words = await wordsOf(pending.token).catch(() => null)
+                flashBackup(words && (await copyText(words)) ? t('action.copied') : t('action.copyFailedShort'))
+              }}
+            >
+              <FlashLabel flash={backupCopied}>{t('claim.copy')}</FlashLabel>
+            </button>
+          )}
         </div>
+        {!DEMO && !unsaved && <p className="invoice-note">{t('deposit.backupHint')}</p>}
         <p className="invoice-note">{t(DEMO ? 'demo.hint' : 'deposit.hint')}</p>
         <button type="button" className="btn btn--text" onClick={onCancel}>
           {t('deposit.cancel')}
