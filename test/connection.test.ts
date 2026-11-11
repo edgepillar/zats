@@ -12,7 +12,7 @@ const fake = vi.hoisted(() => {
     ledger: {
       getFrontierMomentum: vi.fn(async () => ({})),
       getAccountInfoByAddress: vi.fn(async (_addr: unknown) => emptyInfo),
-      getUnreceivedBlocksByAddress: vi.fn(async () => ({ list: [], more: false })),
+      getUnreceivedBlocksByAddress: vi.fn(async () => ({ list: [] as unknown[], more: false })),
       getUnconfirmedBlocksByAddress: vi.fn(async () => ({ count: 0 })),
       getFrontierAccountBlock: vi.fn(async () => ({ hash: { toString: (): string => 'published-hash' } })),
     },
@@ -29,7 +29,10 @@ const fake = vi.hoisted(() => {
 vi.mock('znn-typescript-sdk', () => ({
   Zenon: { getInstance: () => fake.z, setPowBasePath: () => {} },
   isPowWorkerSupported: () => false,
-  Address: { parse: (value: string) => ({ toString: () => value }) },
+  Address: { userByte: 0, parse: (value: string) => ({
+    toString: () => value.trim().toLowerCase(),
+    getBytes: () => new Uint8Array([value.toLowerCase().startsWith('z1qxemdeddedx') ? 1 : 0, ...Array(19).fill(1)]),
+  }) },
   KeyStore: {
     fromEntropy: () => ({
       mnemonic: 'public mocked fixture',
@@ -38,6 +41,7 @@ vi.mock('znn-typescript-sdk', () => ({
   },
   AccountBlockTemplate: {
     send: (to: unknown, token: unknown, amount: unknown) => ({ to, token, amount }),
+    receive: (hash: unknown) => ({ receive: hash }),
   },
 }))
 
@@ -154,5 +158,80 @@ describe('the shared node connection', () => {
     expect(fake.state.closed).toEqual([1])
     await accountState('history')
     expect(fake.z.initialize).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('claim safety', () => {
+  it('refuses the photo’s own address and contract addresses before touching the network', async () => {
+    const { sweep } = await import('../src/zenon')
+    // The mocked key store gives every secret the address "photo".
+    await expect(sweep('zats1' + '00'.repeat(32), 'photo')).rejects.toMatchObject({ code: 'self' })
+    await expect(sweep('zats1' + '00'.repeat(32), 'z1qxemdeddedxplasmaxxxxxxxxxxxxxxxxsctrp')).rejects.toMatchObject({ code: 'contract' })
+    expect(fake.z.initialize).not.toHaveBeenCalled()
+    expect(fake.z.send).not.toHaveBeenCalled()
+  })
+
+  it('never reports a claim that moved nothing as sent', async () => {
+    const { sweep } = await import('../src/zenon')
+    // Holdings come from an unreceived transfer; after receiving, the node still shows no balance.
+    const incoming = { list: [{ hash: 'incoming', tokenStandard: fake.znn.tokenStandard, token: fake.znn, amount: 5n }], more: false }
+    // Seen by the first state read and by the claim's own list; received after that.
+    fake.z.ledger.getUnreceivedBlocksByAddress
+      .mockResolvedValueOnce(incoming)
+      .mockResolvedValueOnce(incoming)
+      .mockResolvedValue({ list: [], more: false })
+    await expect(sweep('zats1' + '00'.repeat(32), 'recipient')).rejects.toMatchObject({ code: 'unconfirmed' })
+    expect(fake.z.send).toHaveBeenCalledTimes(1) // the receive only, no send of nothing
+  })
+
+  it('stops when a published block never shows up as the account’s latest', async () => {
+    vi.useFakeTimers()
+    const { sweep } = await import('../src/zenon')
+    fake.z.ledger.getAccountInfoByAddress.mockResolvedValue({
+      blockCount: 1, balanceInfoMap: { znn: { token: fake.znn, balance: 1n } },
+    })
+    fake.z.ledger.getFrontierAccountBlock.mockResolvedValue({ hash: { toString: () => 'someone-else' } })
+    const claim = sweep('zats1' + '00'.repeat(32), 'recipient').catch((e: unknown) => e)
+    await vi.waitFor(() => expect(fake.z.ledger.getFrontierAccountBlock).toHaveBeenCalled())
+    await vi.advanceTimersByTimeAsync(31_000)
+    expect(await claim).toMatchObject({ code: 'unconfirmed' })
+  })
+
+  it('bounds a silent frontier RPC and does not publish a second block', async () => {
+    vi.useFakeTimers()
+    const { sweep } = await import('../src/zenon')
+    const incoming = { list: [{ hash: 'incoming', tokenStandard: fake.znn.tokenStandard, token: fake.znn, amount: 5n }], more: false }
+    fake.z.ledger.getUnreceivedBlocksByAddress.mockResolvedValue(incoming)
+    fake.z.ledger.getFrontierAccountBlock.mockImplementation(() => new Promise(() => {}))
+    const claim = sweep('zats1' + '00'.repeat(32), 'recipient').catch((e: unknown) => e)
+    await vi.waitFor(() => expect(fake.z.send).toHaveBeenCalledTimes(1))
+    await vi.advanceTimersByTimeAsync(31_000)
+    expect(await claim).toMatchObject({ code: 'unconfirmed' })
+    expect(fake.z.send).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops before sending if receives remain unconfirmed', async () => {
+    vi.useFakeTimers()
+    const { sweep } = await import('../src/zenon')
+    const incoming = { list: [{ hash: 'incoming', tokenStandard: fake.znn.tokenStandard, token: fake.znn, amount: 5n }], more: false }
+    fake.z.ledger.getUnreceivedBlocksByAddress
+      .mockResolvedValueOnce(incoming).mockResolvedValueOnce(incoming)
+      .mockResolvedValue({ list: [], more: false })
+    fake.z.ledger.getUnconfirmedBlocksByAddress.mockResolvedValueOnce({ count: 0 }).mockResolvedValue({ count: 1 })
+    const claim = sweep('zats1' + '00'.repeat(32), 'recipient').catch((e: unknown) => e)
+    await vi.waitFor(() => expect(fake.z.send).toHaveBeenCalledTimes(1))
+    await vi.advanceTimersByTimeAsync(61_000)
+    expect(await claim).toMatchObject({ code: 'unconfirmed' })
+    expect(fake.z.send).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a failed publication response as uncertain and never retries the send', async () => {
+    const { sweep } = await import('../src/zenon')
+    fake.z.ledger.getAccountInfoByAddress.mockResolvedValue({
+      blockCount: 1, balanceInfoMap: { znn: { token: fake.znn, balance: 1n } },
+    })
+    fake.z.send.mockRejectedValue(new Error('response lost'))
+    await expect(sweep('zats1' + '00'.repeat(32), 'recipient')).rejects.toMatchObject({ code: 'unconfirmed' })
+    expect(fake.z.send).toHaveBeenCalledTimes(1)
   })
 })

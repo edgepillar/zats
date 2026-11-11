@@ -36,11 +36,12 @@ import { CheckIcon, ChevronIcon, CopyIcon, DownloadIcon, PhotoIcon, ShareIcon, T
 import { FlashLabel } from './Flash'
 import { SweepForm } from './SweepForm'
 import { DEMO, demoFund } from '../demo'
+import { MAX_AMOUNT, parseZats } from '../amount'
 
 /**
  * Make: photo → amount → a fresh Zenon address → the sender sends ZNN there → photo with zats inside.
- * Money safety: the secret is saved to History before its address is shown, so ZNN that arrives
- * after a reload, a cancel or a closed tab is never lost; if saving fails the 24 words are shown.
+ * The secret is saved to History before its address is shown when browser storage is available.
+ * Failed saves require an offline recovery backup before funding; browser storage can be lost.
  */
 
 type Made = { file: File; url: string; width: number; height: number }
@@ -66,18 +67,9 @@ type Stage =
 const EDGES = [2048, 1280, 640]
 /** 0.1, 0.5, 1 and 5 ZNN. */
 const PRESETS = [10_000_000, 50_000_000, 100_000_000, 500_000_000]
-/** 1,000 ZNN. A proof of concept: keep amounts small. */
-const MAX_AMOUNT = 100_000_000_000
 /** Room a photo needs for the secret (69 bytes) and its frame, with margin. */
 const MIN_ROOM = 128
 const POLL_MS = 3000
-
-function parseAmount(text: string): number | null {
-  const clean = text.replace(/[\s,._]/g, '')
-  if (!/^\d+$/.test(clean)) return null
-  const n = Number(clean)
-  return n >= 1 && n <= MAX_AMOUNT ? n : null
-}
 
 /** Bytes of hidden data the photo can carry once resized to `edge`. */
 function room(photo: LoadedPhoto, edge: number): number {
@@ -114,13 +106,11 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
     [],
   )
 
-  const amount = parseAmount(amountText)
-  const amountError =
-    amount !== null
-      ? null
-      : Number(amountText.replace(/\D/g, '')) > MAX_AMOUNT
-        ? t('make.amount.max', { max: num(MAX_AMOUNT) })
-        : t('make.amount.invalid')
+  const parsedAmount = parseZats(amountText)
+  const amount = parsedAmount.value
+  const amountError = parsedAmount.error === null
+    ? null
+    : t(`make.amount.${parsedAmount.error}`, { max: num(MAX_AMOUNT) })
   const tooSmall = photo !== null && room(photo, edge) < MIN_ROOM
 
   /** A failure as words for this person: specific where we can tell what happened. */
@@ -323,13 +313,9 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
                   inputMode="numeric"
                   autoComplete="off"
                   value={amountText}
-                  onChange={(e) => {
-                    const digits = e.target.value
-                      .normalize('NFKC')
-                      .replace(/\D/g, '')
-                      .replace(/^0+(?=\d)/, '')
-                      .slice(0, 12)
-                    setAmountText(digits ? num(Number(digits)) : '')
+                  onChange={(e) => setAmountText(e.target.value.normalize('NFKC'))}
+                  onBlur={() => {
+                    if (amount !== null) setAmountText(num(amount))
                   }}
                   aria-invalid={amount === null}
                   aria-describedby={amount === null ? 'make-amount-error' : 'make-amount-znn'}
@@ -339,7 +325,7 @@ export function MakeFlow({ active, head }: { active: boolean; head: ReactNode })
               <span className="amount-unit">zats</span>
             </div>
             {amountError ? (
-              <p className="field-error" id="make-amount-error">
+              <p className="field-error" id="make-amount-error" role="status">
                 {amountError}
               </p>
             ) : (

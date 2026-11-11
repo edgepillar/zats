@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { Address, Zenon } from 'znn-typescript-sdk'
 import { makeStickerPng } from '../src/sticker'
 import { readStickerFromBytes } from '../src/read'
 import {
@@ -10,6 +11,7 @@ import {
   newSecret,
   parseAddress,
   shortAddress,
+  sweep,
   wordsOf,
   zatsToZnn,
   type AccountState,
@@ -60,6 +62,29 @@ describe('addresses and amounts', () => {
     expect(await parseAddress('z1qxemdeddedxplasmaxxxxxxxxxxxxxxxxsctrp')).toBe('z1qxemdeddedxplasmaxxxxxxxxxxxxxxxxsctrp')
     expect(await parseAddress('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBeNull()
     expect(await parseAddress('')).toBeNull()
+    expect(await parseAddress(address.toUpperCase())).toBe(address)
+  })
+
+  it('rejects self, non-user and empty destinations using actual SDK addresses before any node call', async () => {
+    const address = await addressOf(ZERO)
+    const connect = vi.spyOn(Zenon.getInstance(), 'initialize').mockRejectedValue(new Error('Network forbidden in unit tests'))
+    const send = vi.spyOn(Zenon.getInstance(), 'send').mockRejectedValue(new Error('Publication forbidden in unit tests'))
+    try {
+      await expect(sweep(ZERO, '  ' + address.toUpperCase() + '  ')).rejects.toMatchObject({ code: 'self' })
+      await expect(sweep(ZERO, 'z1qxemdeddedxplasmaxxxxxxxxxxxxxxxxsctrp')).rejects.toMatchObject({ code: 'contract' })
+      const nonUser = Address.fromCore(new Uint8Array([1, ...Array(19).fill(2)])).toString()
+      expect(nonUser.startsWith('z1qxemdeddedx')).toBe(false)
+      await expect(sweep(ZERO, nonUser)).rejects.toMatchObject({ code: 'contract' })
+      const empty = Address.fromCore(new Uint8Array(20)).toString()
+      await expect(sweep(ZERO, empty)).rejects.toMatchObject({ code: 'burn' })
+      await expect(sweep(ZERO, 'invalid')).rejects.toMatchObject({ code: 'invalid' })
+      await expect(sweep(ZERO, address.slice(0, -1) + (address.endsWith('q') ? 'p' : 'q'))).rejects.toMatchObject({ code: 'invalid' })
+      expect(connect).not.toHaveBeenCalled()
+      expect(send).not.toHaveBeenCalled()
+    } finally {
+      connect.mockRestore()
+      send.mockRestore()
+    }
   })
 
   it('writes zats as ZNN', () => {

@@ -1,7 +1,8 @@
 # Mainnet acceptance test: 0.1 ZNN
 
-**Status: NOT RUN.** A passing build, simulated browser test or website deployment does not prove a
-real mainnet claim. This guide authorizes no transaction. An assistant must obtain explicit
+**Run receipts are private.** This checklist is a procedure, not a record of executions. A passing
+build, simulated browser test or website deployment does not prove a real mainnet claim.
+This guide authorizes no transaction. An assistant must obtain explicit
 approval before funding, claiming, receiving into a wallet, recovering or taking funds back.
 
 The test amount is **0.1 native ZNN = 10,000,000 zats**. Do not increase it to troubleshoot.
@@ -92,7 +93,7 @@ the original PNG and profile A's History until settlement is verified.
 
 ## 4. Inspect in the second browser without claiming
 
-Open the PNG on the mainnet site's **Open** screen in profile B. Require an intact or repaired
+Open the PNG on the mainnet site's **Redeem** screen in profile B. Require an intact or repaired
 payload and **Unclaimed**, showing **10,000,000 zats / 0.1 ZNN**. Stop on a damaged payload, an
 unknown state or an unexpected amount. The format check is not encryption.
 

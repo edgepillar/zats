@@ -31,7 +31,7 @@ page.on('request', async (req) => {
   const body = Buffer.from(await res.arrayBuffer())
   const headers = Object.fromEntries(res.headers.entries())
   delete headers['content-encoding']; delete headers['content-length']
-  if (req.resourceType() === 'document' || req.url().endsWith('.js')) headers['content-security-policy'] = CSP
+  if (!process.env.ZATS_USE_DEPLOYMENT_HEADERS && (req.resourceType() === 'document' || req.url().endsWith('.js'))) headers['content-security-policy'] = CSP
   req.respond({ status: res.status, headers, body })
 })
 const shot = (n) => page.screenshot({ path: join(here, '..', 'test-results', `demo-${n}.png`) })

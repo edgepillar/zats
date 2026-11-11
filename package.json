@@ -2,6 +2,7 @@
   "name": "zats",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Zats hidden in a photo. A Zenon account key in the pixels of a PNG.",
   "scripts": {

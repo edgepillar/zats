@@ -30,6 +30,22 @@ process.on('unhandledRejection', (e) => { console.log(JSON.stringify({ failedAt:
 await page.goto(URL + '#hide', { waitUntil: 'networkidle0' })
 await (await page.$('[data-testid="make-photo-input"]')).uploadFile(join(here, 'sample.jpg'))
 await wait(800)
+// Invalid input must remain visible and must not enable a differently valued deposit.
+for (const text of ['1.5', '１．５', '0,1', '-1', '1e3', '0'.repeat(65) + '1.5']) {
+  await page.click('[data-testid="amount-input"]', { clickCount: 3 })
+  await page.keyboard.press('Backspace')
+  await page.type('[data-testid="amount-input"]', text)
+  const shown = await page.$eval('[data-testid="amount-input"]', el => el.value)
+  if (shown !== text.normalize('NFKC')) throw new Error('Amount input silently changed the value')
+  await page.waitForFunction(() => document.querySelector('[data-testid="amount-input"]').getAttribute('aria-invalid') === 'true')
+  if (!(await page.$eval('.pay-group .btn--primary', el => el.disabled))) throw new Error('Invalid amount enabled a deposit')
+}
+result.invalidAmountsBlocked = true
+await page.click('.presets .preset[aria-pressed="false"]')
+// Restore the 1 ZNN amount used by this fake-node scenario.
+await page.click('[data-testid="amount-input"]', { clickCount: 3 })
+await page.keyboard.press('Backspace')
+await page.type('[data-testid="amount-input"]', '100000000')
 await page.click('.pay-group .btn--primary')
 await page.waitForSelector('[data-testid="deposit-address"]', { timeout: 20000 })
 const photoAddr = await page.$eval('[data-testid="deposit-address"]', (e) => e.textContent.trim())
@@ -83,6 +99,15 @@ await page.type('.money-ln-input', 'z1qnotarealaddress')
 await page.click('.money-ln-send')
 await wait(500)
 result.badAddressError = await page.$eval('.money-ln-status', (e) => e.textContent)
+const beforeGuards = await page.evaluate(() => JSON.stringify(window.__fake.state.calls))
+for (const [destination, expected] of [[photoAddr, 'photo’s own address'], ['z1qxemdeddedxplasmaxxxxxxxxxxxxxxxxsctrp', 'contract address'], ['z1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsggv2f', 'empty address']]) {
+  await page.click('.money-ln-input', { clickCount: 3 })
+  await page.keyboard.press('Backspace')
+  await page.type('.money-ln-input', destination)
+  await page.click('.money-ln-send')
+  await page.waitForFunction((text) => document.querySelector('.money-ln-status')?.textContent.includes(text), {}, expected)
+}
+result.destinationsBlockedBeforeRpc = await page.evaluate((before) => window.__fake.state.published.length === 0 && JSON.stringify(window.__fake.state.calls) === before, beforeGuards)
 await page.$eval('.money-ln-input', (e) => (e.value = ''))
 await page.click('.money-ln-input', { clickCount: 3 })
 await page.keyboard.press('Backspace')
@@ -125,6 +150,8 @@ result.totalSeconds = Math.round((Date.now() - t0) / 1000)
 console.log(JSON.stringify(result, null, 1))
 await browser.close()
 const ok =
+  result.invalidAmountsBlocked &&
+  result.destinationsBlockedBeforeRpc &&
   result.backupWordCount === 24 &&
   result.backupControlsDeposit &&
   result.copiedDepositAddressMatches &&

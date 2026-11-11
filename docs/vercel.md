@@ -18,7 +18,28 @@ receipts private; deployment and simulated transfers do not qualify a real trans
 - Final-origin mainnet node connectivity and real-fund transfers were not established by these
   checks. Funding and claiming still require the acceptance guide and separate approvals.
 
-These observations bind to the initial revision above. A later documentation commit or deployment
+## Security headers
+
+`vercel.json` sets `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a
+Content-Security-Policy with `frame-ancestors 'none'`. The mainnet policy allows only the three
+default public node origins for external connections. Update `connect-src` whenever changing
+`VITE_ZNN_NODES`.
+
+The current SDK's PoW code uses `new Function`. The mainnet policy permits `'unsafe-eval'` for
+compatibility with that code and its blob worker; this is a security trade-off, not a claim of
+complete XSS protection. The demo has a separate policy with no eval permission or external
+node connections. Both permit same-origin assets and local blob handling.
+
+Generated hashed files under `/assets/` and `/demo/assets/` are cached as immutable. The unhashed
+PoW files are excluded from this rule so a future SDK update can replace them.
+
+`npm run e2e:pages` applies these configured response headers in its local server. It runs the
+real SDK with a fake node and real, reduced-difficulty proof of work, tests the isolated demo,
+and checks blocked eval in the demo, external fetches and framing. These checks establish local
+browser behavior; inspect the live response headers after deployment. They publish no mainnet
+blocks and do not replace a separately approved real-fund test.
+
+The initial deployment observations bind to the revision above. A later documentation commit or deployment
 does not retag them as execution evidence for a different revision.
 
 Choose source-repository visibility separately from hosting. Before making source public, review
@@ -107,3 +128,5 @@ the sender, photo account and recipient remain publicly linked.
 - [Generated deployment URLs](https://vercel.com/docs/deployments/generated-urls)
 - [Vercel fair-use guidance](https://vercel.com/docs/limits/fair-use-guidelines)
 - [Browser origins](https://developer.mozilla.org/en-US/docs/Glossary/Origin)
+- [CSP script execution](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src)
+- [Worker CSP behavior](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)
