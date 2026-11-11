@@ -821,7 +821,7 @@ function SavedItem({
         if (!live) return
         // What's inside now; once it's claimed, what it held.
         setZats(s.zats > 0n ? Number(s.zats) : tok.amount)
-        setStatus(s.blockCount === 0 && s.holdings.length === 0 ? 'empty' : claimStateOf(s))
+        setStatus(claimStateOf(s))
       })
       .catch(() => live && setStatus('unknown'))
     return () => {

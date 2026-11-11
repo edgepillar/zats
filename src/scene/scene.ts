@@ -706,6 +706,8 @@ export function startScene(
     const scale = opts.scale ?? (window.innerWidth < 640 ? 2 : 3)
     const w = opts.size?.w ?? Math.ceil(window.innerWidth / scale)
     const h = opts.size?.h ?? Math.ceil(window.innerHeight / scale)
+    // A hidden page may start without a viewport. Wait for resize before allocating pixels.
+    if (w < 1 || h < 1) return
     if (world && world.w === w && world.h === h) return
     canvas.width = w
     canvas.height = h

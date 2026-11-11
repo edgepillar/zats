@@ -34,7 +34,7 @@ export function ClaimCard({ token, check }: { token: string; check: TokenCheck }
   if (!check.summary) return <Typing />
 
   const { amount, others, address } = check.summary
-  const gone = !sent && (check.claim === 'spent' || check.claim === 'pending')
+  const gone = !sent && (check.claim === 'spent' || check.claim === 'pending' || check.claim === 'empty')
   // Until the chain answers, the ways to take the money wait: an already-claimed photo would
   // otherwise offer Claim for a moment and then turn grey.
   const checking = check.claim === 'checking'

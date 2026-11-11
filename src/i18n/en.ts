@@ -77,6 +77,7 @@ export const en = {
   'state.unspent': 'Unclaimed',
   'state.pending': 'Being claimed right now',
   'state.spent': 'Already claimed',
+  'state.empty': 'Nothing was ever sent to this photo',
   'state.unknown': 'Couldn’t reach a Zenon node',
   'claim.button': 'Claim to my Zenon address',
   'claim.copy': 'Copy 24 words',
@@ -93,8 +94,8 @@ export const en = {
   'sweep.pow': 'Zenon is feeless: your browser does a little proof of work instead, about 20 seconds per step (longer on a phone). Keep this page open.',
   'sweep.sentTo': 'Sent to {address}',
   'sweep.err.invalid': 'That doesn’t look like a Zenon address. It should start with z1 and be 40 characters long.',
-  'sweep.err.empty': 'There’s nothing left in this photo. Someone already claimed it.',
-  'sweep.err.busy': 'Someone is claiming this photo right now. Wait a minute and open it again.',
+  'sweep.err.empty': 'This photo has no ZNN or QSR available to claim.',
+  'sweep.err.busy': 'A claim is already in progress. Wait for it to finish before trying again.',
   'sweep.err.failed': 'Something went wrong. Whatever didn’t move is still in the photo: try again.',
 
   'warn.palette': 'Changed to a 256-colour palette on the way.',

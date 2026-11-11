@@ -109,35 +109,75 @@ export async function parseAddress(text: string): Promise<string | null> {
 
 /* ---------- The connection ---------- */
 
-let connecting: Promise<ZenonClient> | undefined
+type NodeConnection = { z: ZenonClient; nodeIndex: number }
+
+// SDK 1.0.5 never updates client.status() to Running. Cache the successful connection ourselves.
+let connection: Promise<NodeConnection> | undefined
+let nextNode = 0
+let sweepInProgress = false
+let deferredDrop: (() => void) | undefined
+
+function closeConnection(z: ZenonClient) {
+  try {
+    z.clearConnection()
+  } catch {
+    // Already closed.
+  }
+}
+
+/** An open socket is not enough: a silent node must not pin the cached connection forever. */
+function nodeRead<T>(read: Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Zenon node request timed out')), 8000)
+    read.then(
+      (value) => { clearTimeout(timer); resolve(value) },
+      (error: unknown) => { clearTimeout(timer); reject(error) },
+    )
+  })
+}
 
 /** A live connection to a public node, trying each one in turn. */
-async function zenon(): Promise<{ sdk: Sdk; z: ZenonClient }> {
+async function zenon() {
   const m = await loadZenon()
   const z = m.Zenon.getInstance()
-  const running = (z.client as { status?: () => number } | undefined)?.status?.() === 2
-  if (running) return { sdk: m, z }
-  connecting ??= (async () => {
+  const pending = (connection ??= (async () => {
     let last: unknown
-    for (const url of nodes()) {
+    const endpoints = nodes()
+    for (let attempt = 0; attempt < endpoints.length; attempt++) {
+      const nodeIndex = (nextNode + attempt) % endpoints.length
+      closeConnection(z)
       try {
-        await z.initialize(url, 8000)
-        await z.ledger.getFrontierMomentum() // proves the node answers, not just that the socket opened
-        return z
+        // Own reconnection here: SDK stop() can leave a scheduled automatic reconnect alive.
+        await z.initialize(endpoints[nodeIndex], 8000, { reconnect: false })
+        await nodeRead(z.ledger.getFrontierMomentum()) // proves the node answers, not just that the socket opened
+        return { z, nodeIndex }
       } catch (e) {
         last = e
-        try {
-          z.clearConnection()
-        } catch {
-          // already closed
-        }
       }
     }
+    closeConnection(z)
     throw new OfflineError(last)
-  })().finally(() => {
-    connecting = undefined
-  })
-  return { sdk: m, z: await connecting }
+  })())
+  try {
+    return { sdk: m, ...(await pending), pending }
+  } catch (e) {
+    if (connection === pending) connection = undefined
+    throw e
+  }
+}
+
+/** A late error from an old read must never close a newer connection. */
+function dropConnection(pending: Promise<NodeConnection>, z: ZenonClient, nodeIndex: number) {
+  const drop = () => {
+    if (connection !== pending) return
+    connection = undefined
+    nextNode = nodeIndex + 1
+    closeConnection(z)
+  }
+  if (connection !== pending) return
+  // Background History reads must not disconnect a claim while it is doing proof of work.
+  if (sweepInProgress) deferredDrop = drop
+  else drop()
 }
 
 /* ---------- Reading an account ---------- */
@@ -178,13 +218,16 @@ async function incomingKept(z: ZenonClient, addr: Addr) {
 }
 
 export async function accountState(address: string): Promise<AccountState> {
-  const { sdk: m, z } = await zenon()
+  const { sdk: m, z, pending, nodeIndex } = await zenon()
   const addr = m.Address.parse(address)
-  const [info, incoming, unconfirmed] = await Promise.all([
+  const [info, incoming, unconfirmed] = await nodeRead(Promise.all([
     z.ledger.getAccountInfoByAddress(addr),
     incomingKept(z, addr),
     z.ledger.getUnconfirmedBlocksByAddress(addr, 0, 50),
-  ])
+  ])).catch((e) => {
+    dropConnection(pending, z, nodeIndex)
+    throw new OfflineError(e)
+  })
   const byToken = new Map<string, Holding>()
   const add = (zts: string, symbol: string, decimals: number, amount: bigint) => {
     if (amount <= 0n || !KEPT.has(zts)) return
@@ -212,7 +255,7 @@ export async function accountState(address: string): Promise<AccountState> {
 
 /* ---------- What Open shows ---------- */
 
-export type ClaimState = 'unspent' | 'pending' | 'spent'
+export type ClaimState = 'unspent' | 'pending' | 'spent' | 'empty'
 
 export interface TokenSummary {
   address: string
@@ -246,7 +289,8 @@ export async function checkClaimState(token: string): Promise<ClaimState> {
 
 export function claimStateOf(s: AccountState): ClaimState {
   if (s.unconfirmed > 0) return 'pending'
-  return s.holdings.length > 0 ? 'unspent' : 'spent'
+  if (s.holdings.length > 0) return 'unspent'
+  return s.blockCount === 0 && s.unreceived === 0 ? 'empty' : 'spent'
 }
 
 /* ---------- Moving it out ---------- */
@@ -279,6 +323,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  * plasma): about 18 seconds each on a recent laptop, longer on a phone.
  */
 export async function sweep(token: string, to: string, onStep?: (s: SweepStep) => void): Promise<SweepResult> {
+  if (sweepInProgress) throw new SweepError('busy')
+  sweepInProgress = true
+  try {
+    return await sweepOnce(token, to, onStep)
+  } finally {
+    sweepInProgress = false
+    const drop = deferredDrop
+    deferredDrop = undefined
+    drop?.()
+  }
+}
+
+async function sweepOnce(token: string, to: string, onStep?: (s: SweepStep) => void): Promise<SweepResult> {
   onStep?.({ k: 'connecting' })
   const { keyPair, address } = await keysOf(token)
   const { sdk: m, z } = await zenon()

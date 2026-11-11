@@ -29,7 +29,7 @@
   }
   const SENDER = 'z1qzrqf7r79d6v64yjv4lsgwuskh4quy9cuj39y5'
   const hex64 = () => [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('')
-  const state = { height: MOM.height, accounts: {}, unreceived: {}, blocks: {}, published: [], calls: {}, errors: [] }
+  const state = { height: MOM.height, accounts: {}, unreceived: {}, blocks: {}, published: [], calls: {}, errors: [], connections: { opened: 0, active: 0, peak: 0 } }
   const acc = (a) => (state.accounts[a] ??= { height: 0, balances: {}, frontier: null })
 
   function fund(address, amount, zts = ZNN) {
@@ -90,6 +90,9 @@
       super()
       this.url = url
       this.readyState = 0
+      state.connections.opened++
+      state.connections.active++
+      state.connections.peak = Math.max(state.connections.peak, state.connections.active)
       setTimeout(() => this._fire('open', new Event('open'), (this.readyState = 1)), 5)
     }
     _fire(type, ev) {
@@ -111,6 +114,8 @@
       setTimeout(() => this._fire('message', new MessageEvent('message', { data: JSON.stringify(reply) })), 5)
     }
     close() {
+      if (this.readyState === 3) return
+      state.connections.active--
       this.readyState = 3
       setTimeout(() => this._fire('close', new CloseEvent('close', { code: 1000 })), 1)
     }

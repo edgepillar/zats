@@ -57,6 +57,7 @@ await wait(600)
 await page.evaluate(() => document.querySelector('.make-grid').scrollIntoView())
 await shot('1-made')
 result.doneTitle = await page.$eval('.done-title', (e) => e.textContent)
+result.makeConnections = await page.evaluate(() => ({ ...window.__fake.state.connections }))
 const b64 = await page.evaluate(async () => {
   const buf = new Uint8Array(await (await fetch(document.querySelector('.done-photo img').src)).arrayBuffer())
   let s = ''; for (const x of buf) s += String.fromCharCode(x); return btoa(s)
@@ -101,7 +102,7 @@ result.sent = await page.$eval('[data-testid="sweep-sent"]', (e) => e.innerText.
 result.chain = await page.evaluate((a) => {
   const s = window.__fake.state
   const bal = (x) => Object.fromEntries(Object.entries(s.accounts[x]?.balances ?? {}).map(([k, v]) => [k.slice(0, 7), String(v)]))
-  return { published: s.published, photoBalances: bal(a), photoUnreceived: (s.unreceived[a] ?? []).length, recipientIncoming: (s.unreceived[window.__fake.SENDER] ?? []).map((b) => `${b.amount} ${b.tokenStandard.slice(0, 7)}`), errors: s.errors }
+  return { published: s.published, photoBalances: bal(a), photoUnreceived: (s.unreceived[a] ?? []).length, recipientIncoming: (s.unreceived[window.__fake.SENDER] ?? []).map((b) => `${b.amount} ${b.tokenStandard.slice(0, 7)}`), errors: s.errors, connections: { ...s.connections } }
 }, photoAddr)
 
 // 5. Open the same photo again: it should say it's already claimed
@@ -127,6 +128,10 @@ const ok =
   result.backupWordCount === 24 &&
   result.backupControlsDeposit &&
   result.copiedDepositAddressMatches &&
+  result.makeConnections.opened === 1 &&
+  result.makeConnections.peak === 1 &&
+  result.chain.connections.opened === 1 &&
+  result.chain.connections.peak === 1 &&
   result.reopened === 'Already claimed' &&
   result.historyStatus === 'Claimed' &&
   result.chain.errors.length === 0 &&

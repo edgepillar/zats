@@ -77,5 +77,8 @@ describe('addresses and amounts', () => {
     expect(claimStateOf({ ...base, holdings: [znn], zats: 1n })).toBe('unspent')
     expect(claimStateOf({ ...base, blockCount: 3 })).toBe('spent')
     expect(claimStateOf({ ...base, holdings: [znn], unconfirmed: 1 })).toBe('pending')
+    expect(claimStateOf(base)).toBe('empty')
+    expect(claimStateOf({ ...base, blockCount: 1 })).toBe('spent')
+    expect(claimStateOf({ ...base, unconfirmed: 1 })).toBe('pending')
   })
 })
