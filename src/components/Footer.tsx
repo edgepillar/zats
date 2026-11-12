@@ -30,6 +30,9 @@ export function Footer() {
       <p className="foot-col foot-col--right">
         <a href="#redeem">{t('footer.redeem')}</a>
         <a href="#how">{t('footer.how')}</a>
+        <a href="https://github.com/edgepillar/zats" target="_blank" rel="noopener noreferrer">
+          {t('footer.github')}
+        </a>
         <a className="foot-accent" href="https://zenon.network" target="_blank" rel="noopener noreferrer">
           {t('footer.credit')}
         </a>

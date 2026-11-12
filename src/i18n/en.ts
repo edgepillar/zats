@@ -250,6 +250,7 @@ export const en = {
   'footer.credit': 'Zenon Network',
   'footer.by': 'Based on Kakaonut by Erik (MIT)',
   'footer.how': 'How it works',
+  'footer.github': 'GitHub',
   'nav.label': 'Main',
   'nav.hide': 'Hide',
   'nav.redeem': 'Redeem',
