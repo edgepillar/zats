@@ -119,7 +119,10 @@ export function extract(px: Pixels): ExtractResult {
   let length = -1
   if (hasMagic(all, 0)) length = new DataView(all.buffer).getUint32(5)
   if (length < 0) {
-    for (let off = 1; off + HEADER_BYTES <= all.length && off < all.length / 2; off++) {
+    // The bound must reach a second copy in an exactly-two-copy photo: frames are tiled
+    // from offset 0, so copy 2 starts at all.length / 2 when the image holds just two.
+    // Implausible hits are still rejected by the boundary check below.
+    for (let off = 1; off + HEADER_BYTES <= all.length; off++) {
       if (hasMagic(all, off)) {
         const candidate = new DataView(all.buffer).getUint32(off + 5)
         if (off === HEADER_BYTES + candidate + CRC_BYTES || off === 2 * (HEADER_BYTES + candidate + CRC_BYTES)) {

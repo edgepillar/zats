@@ -44,6 +44,15 @@ describe('embed and extract', () => {
     expect(out.status).toBe('repaired')
   })
 
+  it('repairs from the second copy when the photo holds exactly two copies', () => {
+    // 73x6 = 438 colour values = 164 bytes: exactly two 82-byte frames (9 header + 69 token + 4 crc).
+    const px = embed(noiseImage(73, 6), token)
+    for (let i = 0; i < 120; i += 4) px.data[i] ^= 1 // kill magic + version in copy 1 (first 30 bytes)
+    const out = extract(px)
+    expect(out.status).toBe('repaired')
+    if (out.status === 'repaired') expect(new TextDecoder().decode(out.payload)).toBe(new TextDecoder().decode(token))
+  })
+
   it('repairs scattered damage across all copies by majority vote', () => {
     const px = embed(noiseImage(200, 200), token)
     const frameBits = (9 + token.length + 4) * 8
