@@ -4,6 +4,8 @@
 the key to that address hidden in its pixels. Send the photo to a friend as a file; they open it,
 paste their z1… address, and the ZNN moves to their wallet.
 
+**[Open Zats](https://zats.pics/)** · [Try the simulated demo](https://zats.pics/demo/).
+
 1 ZNN = 100,000,000 zats.
 
 A fork of [Kakaonut](https://github.com/swedishfrenchpress/kakaonut) by Erik (MIT), which does the
@@ -122,10 +124,14 @@ build. Never fund a demo address or open a funded photo in the demo.
 
 ## Hosting
 
-Vercel serves the combined build at `/` and `/demo/`. Repository visibility is independent of
-website hosting. Recovery material and private operational receipts must never be committed.
-See the [Vercel and custom-domain guide](docs/vercel.md). Select the final production origin
-before funding: browser History does not migrate automatically between domains.
+Vercel serves the combined build at **https://zats.pics/** and **https://zats.pics/demo/**.
+The original **https://zats.vercel.app/** address remains available without a redirect for
+existing History records. Open it in the original browser profile to access those records;
+History, saved photos and pending requests do not migrate automatically between domains.
+Do not repeat a pending or uncertain funding/claim request on the new domain.
+
+Repository visibility is independent of website hosting. Recovery material and private
+operational receipts must never be committed. See the [Vercel and custom-domain guide](docs/vercel.md).
 
 The [Pages workflow](.github/workflows/pages.yml) tests and builds both sites on pushes. Publishing
 is a separate manual action because a Pages website is publicly accessible even when its source

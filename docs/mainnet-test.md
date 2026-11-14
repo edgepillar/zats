@@ -6,7 +6,11 @@ This guide authorizes no transaction. An assistant must obtain explicit
 approval before funding, claiming, receiving into a wallet, recovering or taking funds back.
 
 The test amount is **0.1 native ZNN = 10,000,000 zats**. Do not increase it to troubleshoot.
-The current production origin is **https://zats.vercel.app/**; its `/demo/` route is simulated.
+The current production origin is **https://zats.pics/**; **https://zats.pics/demo/** is simulated.
+The original **https://zats.vercel.app/** address remains available without a redirect for
+existing History and pending records. Use the original browser profile to access them; storage
+does not migrate between these origins. Do not repeat a pending or uncertain funding/claim
+request on the new origin.
 Do not use a unique preview-deployment URL for this test.
 Sender, photo account and recipient are publicly linked on the ledger. The PNG and its 24 words
 control the photo account; neither is encrypted. Keep them out of chats, issue reports, CI,

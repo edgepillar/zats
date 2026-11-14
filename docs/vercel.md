@@ -1,7 +1,10 @@
 # Vercel deployment and a stable mainnet origin
 
-Production origin: **https://zats.vercel.app/**. Demo: **https://zats.vercel.app/demo/**.
-The initial production deployment was verified on **2026-11-11**. No custom domain is configured.
+Production origin: **https://zats.pics/**. Demo: **https://zats.pics/demo/**.
+The original **https://zats.vercel.app/** address remains connected to the same production
+application without a redirect, so existing browser History remains accessible there.
+The initial Vercel-hostname deployment was verified on **2026-11-11**; its historical evidence
+below is separate from the later custom-domain configuration.
 The initial deployment evidence below does not include a real-fund claim. Keep mainnet test
 receipts private; deployment and simulated transfers do not qualify a real transaction.
 
@@ -80,38 +83,41 @@ WebSocket connectivity or a real transaction.
    when the connection offers that choice. Set the Node.js version to 22.x and review the build
    settings above. Keep private operational records and Vercel deployment logs restricted to the
    project account.
-3. Deploy and retain the returned deployment ID, revision and URL. Do not guess that
-   `zats.vercel.app` is available. Select a plan appropriate for the actual use; Hobby is for
-   personal, non-commercial use. Paid plans or changes to billing require separate authorization.
+3. Deploy and retain the returned deployment ID, revision and URL. Use only the hostname reported
+   by Vercel. Select a plan appropriate for the actual use; Hobby is for personal, non-commercial
+   use. Paid plans or changes to billing require separate authorization.
 4. Verify the root page, `/demo/`, both sets of assets and the mainnet proof-of-work files. Check
    that the demo banner appears only in the demo, and test final-origin node access read-only.
    Do not create a funded photo on a temporary preview domain.
 
-## Optional future custom domain
+## Custom domain and existing History
 
-The current choice is to use Vercel for both hosting and the production hostname. Keep
-**`https://zats.vercel.app/`** as the production origin for now; unique deployment URLs are previews.
+`zats.pics` is connected to Production on the existing `edgepillar/zats` Vercel project. Use
+**https://zats.pics/** for new activity and **https://zats.pics/demo/** for simulated transfers.
+The original **https://zats.vercel.app/** address also serves Production. Keep it connected
+without a redirect so users can reopen their existing History in the original browser profile.
+Unique deployment URLs remain unfunded previews.
 
-If a custom domain is requested later, **`https://zats.edgepillar.com/`** and its `/demo/` route
-are options. They are not configured or deployed destinations.
+The domain keeps its current DNS provider; its registration and nameservers do not need to move
+to Vercel. When maintaining the domain:
 
-1. Add only `zats.edgepillar.com` to the verified Vercel project. If it is already assigned
-   elsewhere, inspect that assignment and stop rather than forcing reassignment.
-2. Read the exact CNAME target and any verification record supplied by Vercel. Do not infer the
-   target from documentation examples or reuse another project's value.
-3. Inspect the authoritative DNS records for this exact subdomain. Add the required record at the
-   current DNS provider after reviewing any conflict. Preserve the apex site, `www`, mail records,
-   nameservers and all unrelated records. A subdomain does not require moving the entire zone.
-4. Wait for verified DNS and a valid HTTPS certificate, then verify `/` and `/demo/` on the final
-   domain. Keep temporary deployment URLs for unfunded previews. Configure production-domain
-   redirects only after the final domain is verified.
+1. Read the exact apex A target and any ownership-verification record supplied by this project's
+   Vercel Domains panel. Do not reuse documentation examples or another project's target.
+2. Update only the intended apex record, replacing conflicting parking A records. Preserve
+   nameservers, mail records and unrelated hostnames.
+3. Require valid DNS configuration and HTTPS, then check `/` and `/demo/` at the custom domain.
+   Confirm the original Vercel address still serves the application without a redirect.
+4. Check final-origin node access read-only before any separately approved mainnet test. Domain
+   validation and a TLS certificate are not evidence of wallet or settlement behavior.
 
-Browser localStorage and IndexedDB are scoped to an origin. History, pending deposits and photos
-created at a `vercel.app` address do not automatically appear at `zats.edgepillar.com`. A redirect
-does not migrate these records. Before changing origins, reconcile all pending deposits and
-funded photos at the old origin; any recovery transfer needs fresh approval. Preserve the old
-browser profile, original PNGs and recovery material. Do not clear them merely because the new
-site is live.
+Browser localStorage and IndexedDB are scoped to an origin. History, pending deposits, saved
+PNGs, transaction references and wallet-funding guards at `zats.vercel.app` do not automatically
+appear at `zats.pics`. A redirect would not migrate them. Keep the original browser profile,
+original PNGs and offline recovery material; do not clear them because the new site is live.
+
+Do not repeat funding or start another claim at the new origin while an old-origin request is
+pending or its outcome is unknown. Reconcile the wallet and ledger first. Any recovery transfer
+still needs fresh approval. This domain setup performs no automatic migration or money movement.
 
 ## Mainnet remains a separate approval
 

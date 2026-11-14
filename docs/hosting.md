@@ -1,8 +1,13 @@
 # Static hosting
 
-For Vercel and the proposed `zats.edgepillar.com` production origin, use the
-[Vercel deployment guide](vercel.md). Both hosts use the same combined `dist/` output.
-GitHub Pages publication remains a separate, manually triggered option.
+The production site is **https://zats.pics/**; the simulated demo is
+**https://zats.pics/demo/**. Both are hosted by Vercel. The original
+**https://zats.vercel.app/** address remains available without a redirect so existing History
+can still be opened in its original browser profile. Records do not migrate between domains.
+See the [Vercel deployment guide](vercel.md) for domain configuration and storage boundaries.
+
+Vercel and GitHub Pages use the same combined `dist/` output. GitHub Pages publication remains
+a separate, manually triggered option.
 
 ## GitHub Pages
 
