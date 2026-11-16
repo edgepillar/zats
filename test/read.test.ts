@@ -46,6 +46,28 @@ describe('readStickerFromBytes', () => {
     expect(readStickerFromBytes(png)).toMatchObject({ ok: false, reason: 'none', width: 6000, height: 8000 })
   })
 
+  it('turns away a PNG whose IHDR is not the first chunk, without decoding it', () => {
+    // The spec requires IHDR first, but fast-png decodes a file with a leading chunk.
+    // Sniffed size would come from fixed offsets 16/20, so a lead chunk holding 1×1 there
+    // hides the real IHDR from the dimension cap.
+    const png = encodePng(photo(2, 2))
+    const lead = bytes([0, 0, 0, 4], 'auDt', [0, 0, 0, 1], [0, 0, 0, 1])
+    const crafted = new Uint8Array(8 + lead.length + png.length - 8)
+    crafted.set(png.subarray(0, 8), 0)
+    crafted.set(lead, 8)
+    crafted.set(png.subarray(8), 8 + lead.length)
+    // The real IHDR now sits behind the lead chunk; make it claim a huge size.
+    const ihdrData = 8 + lead.length + 8
+    new DataView(crafted.buffer, crafted.byteOffset).setUint32(ihdrData, 6000)
+    new DataView(crafted.buffer, crafted.byteOffset).setUint32(ihdrData + 4, 8000)
+    expect(readStickerFromBytes(crafted)).toMatchObject({
+      ok: false,
+      reason: 'none',
+      detail: 'Too big to be a Zats photo.',
+      format: 'png',
+    })
+  })
+
   it('says "unreadable" for something that is not an image', () => {
     expect(readStickerFromBytes(bytes('hello, not an image'))).toMatchObject({ ok: false, reason: 'unreadable' })
   })

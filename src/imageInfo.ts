@@ -33,6 +33,11 @@ const AVIF_BRANDS = new Set(['avif', 'avis'])
 
 export function sniffImage(bytes: Uint8Array): ImageInfo {
   if (bytes.length >= 24 && PNG_SIGNATURE.every((v, i) => bytes[i] === v)) {
+    // The PNG spec requires IHDR to be the first chunk. Decoders (fast-png) tolerate a
+    // leading chunk, which would let a crafted file pass the dimension cap in read.ts
+    // with fake small offsets while its real IHDR decodes at full size. Report a size
+    // the cap cannot pass so the file is turned away before any decode.
+    if (ascii(bytes, 12, 4) !== 'IHDR') return { format: 'png', width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER }
     return { format: 'png', width: be32(bytes, 16), height: be32(bytes, 20) }
   }
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
